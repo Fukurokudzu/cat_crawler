@@ -28,9 +28,9 @@ def init_drives():
         this_drive['volume_name'] = drive.VolumeName
         this_drive['file_system'] = drive.FileSystem
         this_drive['drive_type'] = drive_types[drive.DriveType]
-        this_drive['volume_serial'] = drive.VolumeSerialNumber
         this_drive['size'] = drive.Size
         this_drive['free_size'] = drive.FreeSpace
+        this_drive['volume_serial'] = drive.VolumeSerialNumber
         local_drives.append(this_drive)
         # print(drive)
     return local_drives
@@ -62,6 +62,9 @@ def scan_folder(path):
             list_of_folders.append(os.path.join(root, folder))
         for file in files:
             list_of_files.append(os.path.join(root,file))
+    
+    print(f"\nDisk {path} scanned")
+    print(f"    {len(list_of_files)} files in {len(list_of_folders)} folders found\n")
 
     return len(list_of_files), len(list_of_folders) #amount of files found
 
@@ -72,14 +75,17 @@ if __name__ == "__main__":
 
     while True:
         try:
-            local_drive_num = int(input(f"Choose drive you want to index (should be a number between 0 and {local_drives_amount - 1}): "))
-            if local_drive_num in range(local_drives_amount):
+            local_drive_num = input(f"Choose drive you want to index (should be a number between 0 and {local_drives_amount - 1}, q to quit): ")
+            if local_drive_num == 'q':
+                print("Let's quit then!")
+                quit()
+            elif int(local_drive_num) in range(local_drives_amount):
+                local_drive_num = int(local_drive_num)
                 break
         except ValueError:
             print(f"Drive index shoud be a number between 0 and {local_drives_amount - 1}")
 
     volume_to_index = Volume(local_drives[local_drive_num])
-    print("\nYou've chosen drive", volume_to_index.caption)
-    files, folders = scan_folder(volume_to_index.caption)
-    print(f"\nDisk {volume_to_index.caption} scanned")
-    print(f"    {files} files in {folders} folders found")
+    print("\nScanning drive", volume_to_index.caption,"...")
+    scan_folder(volume_to_index.caption)
+    
