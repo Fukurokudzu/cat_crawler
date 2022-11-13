@@ -32,19 +32,26 @@ def init_drives():
         this_drive['size'] = drive.Size
         this_drive['free_size'] = drive.FreeSpace
         local_drives.append(this_drive)
-        print(drive)
+        # print(drive)
     return local_drives
 
 
 def show_drives(local_drives):
     # prints all the local_drives details including name, type and size
-    # TO DO - some nice formating here
+    # TODO Volume Size in Gb
     print("\nConnected local_drives:")
     for i in range(len(local_drives)):
         print(f"\n[#{i}] Disk", local_drives[i]['caption'])
         for key, value in local_drives[i].items():
+            if key == 'size':
+                    print("    ", key, ":", "{0:.2f}".format(int(value)/1024**3), "Gb")
+                    continue
+            if key == 'free_size':
+                    print("    ", key, ":", "{0:.2f}".format(int(value)/1024**3), "Gb")
+                    continue
             if key != 'caption':
-                print("    ", key, value)
+                print("    ", key, ":", value)
+                
 
 def scan_folder(path):
     list_of_files = []
@@ -72,7 +79,7 @@ if __name__ == "__main__":
             print(f"Drive index shoud be a number between 0 and {local_drives_amount - 1}")
 
     volume_to_index = Volume(local_drives[local_drive_num])
-    print("You've chosen drive", volume_to_index.caption)
+    print("\nYou've chosen drive", volume_to_index.caption)
     files, folders = scan_folder(volume_to_index.caption)
     print(f"\nDisk {volume_to_index.caption} scanned")
     print(f"    {files} files in {folders} folders found")
