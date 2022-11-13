@@ -12,11 +12,12 @@ def init_drives():
         5 : "Compact Disc",
         6 : "RAM Disk"
         }
+        
     drives = []
     c = wmi.WMI()
     for drive in c.Win32_LogicalDisk():
         this_drive = {}
-        this_drive['cation'] = drive.Caption
+        this_drive['caption'] = drive.Caption
         this_drive['volume_name'] = drive.VolumeName
         this_drive['file_system'] = drive.FileSystem
         this_drive['drive_type'] = drive_types[drive.DriveType]
@@ -27,9 +28,13 @@ def init_drives():
 def show_drives(drives):
     # prints all the drives details including name, type and size
     # TO DO - some nice formating here
+    print("\nConnected drives:")
     for i in range(len(drives)):
-        print(drives[i], sep = "\n")
-
+        print(f"\n[{i}] Disk", drives[i]['caption'])
+        for key, value in drives[i].items():
+            if key != 'caption':
+                print("    ", key, value)
+        
 if __name__ == "__main__":
     drives = init_drives()
     show_drives(drives)
