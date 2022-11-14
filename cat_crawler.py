@@ -133,25 +133,45 @@ def print_help(available_commands):
     for key, val in available_commands.items():
         print("    ", key, val)
 
+
 def search_string(search_query):
+    """
+    Crawling throughout .indx files in search of user search query
+    """
     indx_files = [file for file in os.listdir(
-            os.path.dirname(__file__)) if file.endswith('.indx')]
+        os.path.dirname(__file__)) if file.endswith('.indx')]
     for indx_file in indx_files:
         file_realpath = os.path.dirname(__file__)+"\\"+indx_file
         with open(file_realpath, "r", encoding="utf-8") as search_list:
-            found = []
+            files_found = []
+            folders_found = []
+            current_dir = ""
             for line in search_list.readlines():
-                if search_query in line:
-                    found.append(line)
-        print("Found \""+search_query.strip()+"\":", len(found), "times in", indx_file, "\n")
-        output_limit = 3 # limits how many search results we print
-        if len(found) < output_limit:
-            for i in range(len(found)):
-                print(found[i])
-        else:
-            for i in range(output_limit):
-                print(found[i])
-            print("Too many entries to show here, full output in results.txt\n")
+                if search_query.strip() in line:
+                    folder_found, file_found = os.path.split(line)
+                    if search_query.strip() in file_found:
+                        files_found.append(line)
+                    if search_query.strip() in folder_found:
+                        if folder_found != current_dir:
+                            current_dir = folder_found
+                            folders_found.append(folder_found)
+
+        print("Found \""+search_query.strip()+"\":",
+              len(files_found), "files in", indx_file, "\n")
+        print("Found \""+search_query.strip()+"\":",
+              len(folders_found), "folders in", indx_file, "\n")
+
+        # some debugging data in here
+        # output_limit = 5  # limits how many search results we print
+        # search_results = files_found + folders_found
+        # if len(search_results) <= output_limit:
+        #     for i in range(len(search_results)):
+        #         print(search_results[i])
+        # else:
+        #     for i in range(output_limit):
+        #         print(search_results[i])
+        #     # this part is not working for now
+        #     print("Too many entries to show here, full output in results.txt\n")
 
 
 if __name__ == "__main__":
@@ -199,7 +219,6 @@ if __name__ == "__main__":
             print("Please insert search query after -s")
             quit()
         search_query = ""
-        for i in range(2,len(sys.argv)):
-            search_query += str(sys.argv[i]) + " "
+        for i in range(2, len(sys.argv)):
+            search_query += str(sys.argv[i])+" "
         search_string(search_query)
-
