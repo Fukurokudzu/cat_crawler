@@ -2,6 +2,12 @@ import wmi
 import os
 import sys
 
+available_commands = {
+    "--scan": "scan volume",
+    "-p": "print system drives",
+    "-s": "search file in volumes",
+}
+
 
 class Volume:
     """
@@ -66,28 +72,29 @@ def show_drives(local_drives):
 
 def scan_volume(path):
     """
-    Creates list of files for selected path
+    Creates list of indxfiles for selected path
     """
     list_of_files = []
     list_of_folders = []
 
     # os.walk returns dirpath, dirnames, filenames
-    for root, dirs, files in os.walk(path):
+    for root, dirs, indxfiles in os.walk(path):
         for folder in dirs:
             list_of_folders.append(os.path.join(root, folder) + "\n")
-        for file in files:
+        for file in indx_files:
             list_of_files.append(os.path.join(root, file) + "\n")
 
     print(f"\nDisk {path} scanned")
     print(
-        f"    {len(list_of_files)} files in {len(list_of_folders)} folders found\n")
-    
+        f"    {len(list_of_files)} files and {len(list_of_folders)} folders found\n")
+
     # amount of files and folders found
     return list_of_files, list_of_folders, len(list_of_files), len(list_of_folders)
 
+
 def write_database_to_file(database, serial):
     """
-    writes list of indexed volume files to .indx file next to the script
+    writes list of indexed volume indxfiles to .indx file next to the script
     uses volume serial as filename
     """
     index_file_path = os.path.dirname(__file__) + "\\"+serial+".indx"
@@ -99,34 +106,34 @@ def write_database_to_file(database, serial):
         print("Can't write to file, quitting")
         quit()
 
-    print("File",index_file_path,"created")
+    print("File", index_file_path, "created")
 
     return index_file_path
+
 
 def parse_args():
     """
     Cheking CLI arguments for available comments we can handle
     """
-    available_commands = {
-                "-s": "scan volume",
-                "-p" : "print system drives",
-                }
 
     if (len(sys.argv) == 1):
         print_help(available_commands)
         return None
     else:
         if sys.argv[1] in available_commands.keys():
+
             pass
         else:
             print_help(available_commands)
             quit()
-    return sys.argv[1]
+    return sys.argv
+
 
 def print_help(available_commands):
     print("Available arguments are:")
     for key, val in available_commands.items():
         print("    ", key, val)
+
 
 if __name__ == "__main__":
     if not parse_args():
@@ -136,7 +143,7 @@ if __name__ == "__main__":
 
     local_drives = init_drives()
 
-    if command == "-s":
+    if command == "--scan":
         show_drives(local_drives)
         local_drives_amount = len(local_drives)
 
@@ -156,11 +163,34 @@ if __name__ == "__main__":
 
         volume_to_index = Volume(local_drives[local_drive_num])
         print("\nScanning drive", volume_to_index.caption, "...")
-        
-        list_of_files, list_of_folders, scanned_files_num, scanned_folders_num = scan_volume(volume_to_index.caption)
+
+        list_of_files, list_of_folders, scanned_files_num, scanned_folders_num = scan_volume(
+            volume_to_index.caption)
 
         write_database_to_file(list_of_files, volume_to_index.serial)
+
+    # printing connected system drives
     elif command == "-p":
         show_drives(local_drives)
         quit()
 
+    # searching for search string in indexed files and folders
+    elif command == "-s":
+        search_str = str(sys.argv[2])
+        indx_files = [file for file in os.listdir(
+            os.path.dirname(__file__)) if file.endswith('.indx')]
+        for indx_file in indx_files:
+            file_realpath = os.path.dirname(__file__)+"\\"+indx_file
+            with open(file_realpath, "r", encoding="utf-8") as search_list:
+                found = []
+                for line in search_list.readlines():
+                    if search_str in line:
+                        found.append(line)
+            print("Found", search_str+":", len(found), "times in", indx_file, "\n")
+            if len(found) < 10:
+                for i in range(len(found)):
+                    print(found[i])
+            else:
+                for i in range(10):
+                    print(found[i])
+                print("Too many entries to show here, full output in results.txt")
