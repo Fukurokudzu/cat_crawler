@@ -5,7 +5,7 @@ import sys
 available_commands = {
     "--scan": "scan volume",
     "-p": "print system drives",
-    "-s": "search file in volumes",
+    "-s": "search string in file or folder names in database",
 }
 
 
@@ -121,7 +121,6 @@ def parse_args():
         return None
     else:
         if sys.argv[1] in available_commands.keys():
-
             pass
         else:
             print_help(available_commands)
@@ -133,6 +132,26 @@ def print_help(available_commands):
     print("Available arguments are:")
     for key, val in available_commands.items():
         print("    ", key, val)
+
+def search_string(search_query):
+    indx_files = [file for file in os.listdir(
+            os.path.dirname(__file__)) if file.endswith('.indx')]
+    for indx_file in indx_files:
+        file_realpath = os.path.dirname(__file__)+"\\"+indx_file
+        with open(file_realpath, "r", encoding="utf-8") as search_list:
+            found = []
+            for line in search_list.readlines():
+                if search_query in line:
+                    found.append(line)
+        print("Found \""+search_query.strip()+"\":", len(found), "times in", indx_file, "\n")
+        output_limit = 3 # limits how many search results we print
+        if len(found) < output_limit:
+            for i in range(len(found)):
+                print(found[i])
+        else:
+            for i in range(output_limit):
+                print(found[i])
+            print("Too many entries to show here, full output in results.txt\n")
 
 
 if __name__ == "__main__":
@@ -176,21 +195,11 @@ if __name__ == "__main__":
 
     # searching for search string in indexed files and folders
     elif command == "-s":
-        search_str = str(sys.argv[2])
-        indx_files = [file for file in os.listdir(
-            os.path.dirname(__file__)) if file.endswith('.indx')]
-        for indx_file in indx_files:
-            file_realpath = os.path.dirname(__file__)+"\\"+indx_file
-            with open(file_realpath, "r", encoding="utf-8") as search_list:
-                found = []
-                for line in search_list.readlines():
-                    if search_str in line:
-                        found.append(line)
-            print("Found", search_str+":", len(found), "times in", indx_file, "\n")
-            if len(found) < 10:
-                for i in range(len(found)):
-                    print(found[i])
-            else:
-                for i in range(10):
-                    print(found[i])
-                print("Too many entries to show here, full output in results.txt")
+        if len(sys.argv) <= 2:
+            print("Please insert search query after -s")
+            quit()
+        search_query = ""
+        for i in range(2,len(sys.argv)):
+            search_query += str(sys.argv[i]) + " "
+        search_string(search_query)
+
