@@ -9,6 +9,7 @@ class Volume:
 
     def __init__(self, settings):
         self.caption = settings['caption']
+        self.serial = settings['serial']
 
 
 def init_drives():
@@ -36,7 +37,7 @@ def init_drives():
         this_drive['drive_type'] = drive_types[drive.DriveType]
         this_drive['size'] = drive.Size
         this_drive['free_size'] = drive.FreeSpace
-        this_drive['volume_serial'] = drive.VolumeSerialNumber
+        this_drive['serial'] = drive.VolumeSerialNumber
         local_drives.append(this_drive)
         # print(drive)
     return local_drives
@@ -62,7 +63,7 @@ def show_drives(local_drives):
                 print("    ", key, ":", value)
 
 
-def scan_folder(path):
+def scan_volume(path):
     """
     Creates list of files for selected path
     """
@@ -76,22 +77,30 @@ def scan_folder(path):
         for file in files:
             list_of_files.append(os.path.join(root, file) + "\n")
 
-    own_path = os.path.dirname(__file__) + "\\test.txt"
+    print(f"\nDisk {path} scanned")
+    print(
+        f"    {len(list_of_files)} files in {len(list_of_folders)} folders found\n")
+    
+    # amount of files and folders found
+    return list_of_files, list_of_folders, len(list_of_files), len(list_of_folders)
+
+def write_database_to_file(database, serial):
+    """
+    writes list of indexed volume files to .indx file next to the script
+    uses volume serial as filename
+    """
+    index_file_path = os.path.dirname(__file__) + "\\"+serial+".indx"
 
     try:
-        with open(own_path, "w", encoding="utf-8") as export_file:
-            export_file.writelines(list_of_files)
+        with open(index_file_path, "w", encoding="utf-8") as export_file:
+            export_file.writelines(database)
     except:
         print("Can't write to file, quitting")
         quit()
 
-    print(f"\nDisk {path} scanned")
-    print(
-        f"    {len(list_of_files)} files in {len(list_of_folders)} folders found\n")
+    print("File",index_file_path,"created")
 
-    # amount of files and folders found
-    return len(list_of_files), len(list_of_folders)
-
+    return index_file_path
 
 if __name__ == "__main__":
     local_drives = init_drives()
@@ -114,4 +123,9 @@ if __name__ == "__main__":
 
     volume_to_index = Volume(local_drives[local_drive_num])
     print("\nScanning drive", volume_to_index.caption, "...")
-    scan_folder(volume_to_index.caption)
+    
+    list_of_files, list_of_folders, scanned_files_num, scanned_folders_num = scan_volume(volume_to_index.caption)
+
+    write_database_to_file(list_of_files, volume_to_index.serial)
+
+        
