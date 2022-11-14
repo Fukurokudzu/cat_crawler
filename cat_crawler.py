@@ -1,5 +1,6 @@
 import wmi
 import os
+import sys
 
 
 class Volume:
@@ -102,30 +103,64 @@ def write_database_to_file(database, serial):
 
     return index_file_path
 
+def parse_args():
+    """
+    Cheking CLI arguments for available comments we can handle
+    """
+    available_commands = {
+                "-s": "scan volume",
+                "-p" : "print system drives",
+                }
+
+    if (len(sys.argv) == 1):
+        print_help(available_commands)
+        return None
+    else:
+        if sys.argv[1] in available_commands.keys():
+            pass
+        else:
+            print_help(available_commands)
+            quit()
+    return sys.argv[1]
+
+def print_help(available_commands):
+    print("Available arguments are:")
+    for key, val in available_commands.items():
+        print("    ", key, val)
+
 if __name__ == "__main__":
+    if not parse_args():
+        quit()
+    else:
+        command = sys.argv[1]
+
     local_drives = init_drives()
-    show_drives(local_drives)
-    local_drives_amount = len(local_drives)
 
-    while True:
-        try:
-            local_drive_num = input(
-                f"Choose drive you want to index (should be a number between 0 and {local_drives_amount - 1}, q to quit): ")
-            if local_drive_num == 'q':
-                print("Let's quit then!")
-                quit()
-            elif int(local_drive_num) in range(local_drives_amount):
-                local_drive_num = int(local_drive_num)
-                break
-        except ValueError:
-            print(
-                f"Drive index shoud be a number between 0 and {local_drives_amount - 1}")
+    if command == "-s":
+        show_drives(local_drives)
+        local_drives_amount = len(local_drives)
 
-    volume_to_index = Volume(local_drives[local_drive_num])
-    print("\nScanning drive", volume_to_index.caption, "...")
-    
-    list_of_files, list_of_folders, scanned_files_num, scanned_folders_num = scan_volume(volume_to_index.caption)
+        while True:
+            try:
+                local_drive_num = input(
+                    f"Choose drive you want to index (should be a number between 0 and {local_drives_amount - 1}, q to quit): ")
+                if local_drive_num == 'q':
+                    print("Let's quit then!")
+                    quit()
+                elif int(local_drive_num) in range(local_drives_amount):
+                    local_drive_num = int(local_drive_num)
+                    break
+            except ValueError:
+                print(
+                    f"Drive index shoud be a number between 0 and {local_drives_amount - 1}")
 
-    write_database_to_file(list_of_files, volume_to_index.serial)
-
+        volume_to_index = Volume(local_drives[local_drive_num])
+        print("\nScanning drive", volume_to_index.caption, "...")
         
+        list_of_files, list_of_folders, scanned_files_num, scanned_folders_num = scan_volume(volume_to_index.caption)
+
+        write_database_to_file(list_of_files, volume_to_index.serial)
+    elif command == "-p":
+        show_drives(local_drives)
+        quit()
+
