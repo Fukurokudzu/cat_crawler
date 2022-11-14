@@ -78,7 +78,7 @@ def scan_volume(path):
     list_of_folders = []
 
     # os.walk returns dirpath, dirnames, filenames
-    for root, dirs, indxfiles in os.walk(path):
+    for root, dirs, indx_files in os.walk(path):
         for folder in dirs:
             list_of_folders.append(os.path.join(root, folder) + "\n")
         for file in indx_files:
@@ -94,7 +94,7 @@ def scan_volume(path):
 
 def write_database_to_file(database, serial):
     """
-    writes list of indexed volume indxfiles to .indx file next to the script
+    writes list of indexed volume indx_files to .indx file next to the script
     uses volume serial as filename
     """
     index_file_path = os.path.dirname(__file__) + "\\"+serial+".indx"
@@ -203,8 +203,7 @@ if __name__ == "__main__":
         volume_to_index = Volume(local_drives[local_drive_num])
         print("\nScanning drive", volume_to_index.caption, "...")
 
-        list_of_files, list_of_folders, scanned_files_num, scanned_folders_num = scan_volume(
-            volume_to_index.caption)
+        list_of_files, list_of_folders, scanned_files_num, scanned_folders_num = scan_volume(volume_to_index.caption)
 
         write_database_to_file(list_of_files, volume_to_index.serial)
 
