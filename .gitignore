@@ -1,4 +1,4 @@
-# ignore ALL .log files
+# ignore indexed files
 *.indx
 
 # Created by https://www.toptal.com/developers/gitignore/api/python
@@ -167,3 +167,5 @@ cython_debug/
 #.idea/
 
 # End of https://www.toptal.com/developers/gitignore/api/python
+.vscode/launch.json
+Py_snippets.py

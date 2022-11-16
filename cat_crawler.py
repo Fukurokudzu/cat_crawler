@@ -155,11 +155,14 @@ def search_string(search_query):
                         if folder_found != current_dir:
                             current_dir = folder_found
                             folders_found.append(folder_found)
-
-        print("Found \""+search_query.strip()+"\":",
-              len(files_found), "files in", indx_file, "\n")
-        print("Found \""+search_query.strip()+"\":",
-              len(folders_found), "folders in", indx_file, "\n")
+            if files_found:
+                print("Found \""+search_query.strip()+"\" in",
+                    len(files_found), "files in", indx_file, "\n")
+            elif folders_found:
+                print("Found \""+search_query.strip()+"\"in",
+                    len(folders_found), "folders in", indx_file, "\n")
+            else:
+                print("Nothing found in", indx_file)
 
         # some debugging data in here
         # output_limit = 5  # limits how many search results we print
@@ -201,7 +204,7 @@ if __name__ == "__main__":
                     f"Drive index shoud be a number between 0 and {local_drives_amount - 1}")
 
         volume_to_index = Volume(local_drives[local_drive_num])
-        print("\nScanning drive", volume_to_index.caption, "...")
+        print("\nScanning drive", volume_to_index.caption.rstrip("\\")+"...\nthis might take a few minutes")
 
         list_of_files, list_of_folders, scanned_files_num, scanned_folders_num = scan_volume(volume_to_index.caption)
 
