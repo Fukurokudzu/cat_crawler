@@ -2,6 +2,12 @@ import wmi
 import os
 import sys
 
+# to store and get info in json
+import json
+
+# to show time by perf_counter()
+from time import perf_counter
+
 available_commands = {
     "--scan": "scan volume",
     "-p": "print system drives",
@@ -46,7 +52,6 @@ def init_drives():
         this_drive['free_size'] = drive.FreeSpace
         this_drive['serial'] = drive.VolumeSerialNumber
         local_drives.append(this_drive)
-        # print(drive)
     return local_drives
 
 
@@ -120,11 +125,10 @@ def parse_args():
         print_help(available_commands)
         return None
     else:
-        if sys.argv[1] in available_commands.keys():
-            pass
-        else:
+        if sys.argv[1].lower() not in available_commands.keys():
             print_help(available_commands)
             quit()
+
     return sys.argv
 
 
@@ -181,7 +185,7 @@ if __name__ == "__main__":
     if not parse_args():
         quit()
     else:
-        command = sys.argv[1]
+        command = sys.argv[1].lower()
 
     local_drives = init_drives()
 
@@ -202,13 +206,16 @@ if __name__ == "__main__":
             except ValueError:
                 print(
                     f"Drive index shoud be a number between 0 and {local_drives_amount - 1}")
-
+        
+        t1_start = perf_counter()
         volume_to_index = Volume(local_drives[local_drive_num])
         print("\nScanning drive", volume_to_index.caption.rstrip("\\")+"...\nthis might take a few minutes")
 
         list_of_files, list_of_folders, scanned_files_num, scanned_folders_num = scan_volume(volume_to_index.caption)
 
         write_database_to_file(list_of_files, volume_to_index.serial)
+        t1_stop = perf_counter()
+        print("Scanning finished", "{0:.2f}".format(t1_stop-t1_start), "seconds")
 
     # printing connected system drives
     elif command == "-p":
