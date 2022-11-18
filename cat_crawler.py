@@ -1,18 +1,19 @@
 import wmi
 import os
 import sys
-
-# to store and get info in json
-import json
+import pickle
 
 # to show time by perf_counter()
 from time import perf_counter
 
 AVAILABLE_COMMANDS = {
     "--scan": "scan volume",
-    "-p": "print system drives",
+    "-l": "print local system drives",
     "-s": "search string in file or folder names in database",
+    "-p": "print indexed drives"
 }
+
+LOCAL_DB = os.path.dirname(__file__) + "\\local.db"
 
 DRIVE_TYPES = {
         0: "Unknown",
@@ -25,6 +26,20 @@ DRIVE_TYPES = {
         }
 
 IDENT = "    "
+
+class Indexed_Volume:
+    """
+    class for dealing with already indexed volumes
+    """
+
+    def __init__(self):
+        self.caption = ""
+        self.volume_name = ""
+        self.file_system = ""
+        self.drive_type = DRIVE_TYPES[0]
+        self.size = 0
+        self.free_size = 0
+        self.serial = 0
 
 class Volume:
     """
@@ -58,18 +73,18 @@ def show_drives(local_drives):
     """
     prints all the local_drives details including name, type and size (in Gbs)
     """
-    print("\nConnected local_drives:")
     for i in range(len(local_drives)):
         show_drive = local_drives[i]
+
         print(f"\n[#{i}] Disk", show_drive.caption)
+        print(IDENT + "Name:", show_drive.volume_name)
         print(IDENT + "Size: {0:.2f}".format(
             int(show_drive.size)/1024**3), "Gb")
         print(IDENT + "Free size: {0:.2f}".format(
             int(show_drive.free_size)/1024**3), "Gb")
         print(IDENT + "File system:",show_drive.file_system)
         print(IDENT + "Type:", show_drive.drive_type)
-        print(IDENT + "Volume serial:", show_drive.serial)
-        
+        print(IDENT + "Volume serial:", show_drive.serial)    
 
 def scan_volume(path):
     """
@@ -93,7 +108,7 @@ def scan_volume(path):
     return list_of_files, list_of_folders, len(list_of_files), len(list_of_folders)
 
 
-def write_database_to_file(database, serial):
+def write_indexes_to_file(indexes, serial):
     """
     writes list of indexed volume indx_files to .indx file next to the script
     uses volume serial as filename
@@ -102,15 +117,53 @@ def write_database_to_file(database, serial):
 
     try:
         with open(index_file_path, "w", encoding="utf-8") as export_file:
-            export_file.writelines(database)
+            export_file.writelines(indexes)
     except:
         print("Can't write to file, quitting")
         quit()
 
     print("File", index_file_path, "created")
 
-    return index_file_path
+    return 0
 
+def init_local_db(db_file_addr):
+    # might be needed later
+    pass
+
+
+
+def add_to_db(volume):
+
+    # init_local_db(LOCAL_DB)
+
+    # not sure about this part, looks buggy:
+    # if os.path.exists(LOCAL_DB):
+    #     mode = 'ab'
+    # else:
+    #     mode = 'wb'
+    database = []
+    database.append(volume)
+    with open(LOCAL_DB, 'wb') as db:
+       pickle.dump(database, db)
+    
+    
+    print(f"Volume {volume.serial} added to local database")
+
+def remove_from_db(serial):
+    pass
+
+def update_db(serial):
+    pass
+
+def print_db():
+    database = []
+    with open(LOCAL_DB, 'rb') as db:
+        db_data = pickle.load(db)
+        for obj in db_data:
+            database.append(obj)
+            show_drives(database)
+        
+            
 
 def parse_args():
     """
@@ -210,14 +263,15 @@ if __name__ == "__main__":
 
         list_of_files, list_of_folders, scanned_files_num, scanned_folders_num = scan_volume(volume_to_index.caption)
 
-        write_database_to_file(list_of_files, volume_to_index.serial)
+        write_indexes_to_file(list_of_files, volume_to_index.serial)
+        add_to_db(volume_to_index)
         t1_stop = perf_counter()
         print("Scanning finished", "{0:.2f}".format(t1_stop-t1_start), "seconds")
 
     # printing connected system drives
-    elif command == "-p":
+    elif command == "-l":
+        print("\nConnected local_drives:")
         show_drives(local_drives)
-        quit()
 
     # searching for search string in indexed files and folders
     elif command == "-s":
@@ -228,3 +282,7 @@ if __name__ == "__main__":
         for i in range(2, len(sys.argv)):
             search_query += str(sys.argv[i])+" "
         search_string(search_query)
+
+    elif command == "-p":
+        print_db()
+
