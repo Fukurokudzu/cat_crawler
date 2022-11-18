@@ -8,29 +8,13 @@ import json
 # to show time by perf_counter()
 from time import perf_counter
 
-available_commands = {
+AVAILABLE_COMMANDS = {
     "--scan": "scan volume",
     "-p": "print system drives",
     "-s": "search string in file or folder names in database",
 }
 
-
-class Volume:
-    """
-    class for dealing with system volumes
-    """
-
-    def __init__(self, settings):
-        self.caption = settings['caption']
-        self.serial = settings['serial']
-
-
-def init_drives():
-    """
-    initialize OS local_drives
-    """
-
-    drive_types = {
+DRIVE_TYPES = {
         0: "Unknown",
         1: "No Root Directory",
         2: "Removable Disk",
@@ -38,20 +22,35 @@ def init_drives():
         4: "Network Drive",
         5: "Compact Disc",
         6: "RAM Disk"
-    }
+        }
+
+IDENT = "    "
+
+class Volume:
+    """
+    class for dealing with system volumes
+    """
+
+    def __init__(self, drive):
+        self.caption = drive.Caption + "\\"
+        self.volume_name = drive.VolumeName
+        self.file_system = drive.FileSystem
+        self.drive_type = DRIVE_TYPES[drive.DriveType]
+        self.size = drive.Size
+        self.free_size = drive.FreeSpace
+        self.serial = drive.VolumeSerialNumber
+
+
+def init_drives():
+    """
+    initialize OS local_drives
+    """
 
     local_drives = []
     c = wmi.WMI()
     for drive in c.Win32_LogicalDisk():
-        this_drive = {}
-        this_drive['caption'] = drive.Caption + "\\"
-        this_drive['volume_name'] = drive.VolumeName
-        this_drive['file_system'] = drive.FileSystem
-        this_drive['drive_type'] = drive_types[drive.DriveType]
-        this_drive['size'] = drive.Size
-        this_drive['free_size'] = drive.FreeSpace
-        this_drive['serial'] = drive.VolumeSerialNumber
-        local_drives.append(this_drive)
+        NewVolume = Volume(drive)
+        local_drives.append(NewVolume)
     return local_drives
 
 
@@ -61,19 +60,16 @@ def show_drives(local_drives):
     """
     print("\nConnected local_drives:")
     for i in range(len(local_drives)):
-        print(f"\n[#{i}] Disk", local_drives[i]['caption'])
-        for key, value in local_drives[i].items():
-            if key == 'size':
-                print("    ", key, ":", "{0:.2f}".format(
-                    int(value)/1024**3), "Gb")
-                continue
-            if key == 'free_size':
-                print("    ", key, ":", "{0:.2f}".format(
-                    int(value)/1024**3), "Gb")
-                continue
-            if key != 'caption':
-                print("    ", key, ":", value)
-
+        show_drive = local_drives[i]
+        print(f"\n[#{i}] Disk", show_drive.caption)
+        print(IDENT + "Size: {0:.2f}".format(
+            int(show_drive.size)/1024**3), "Gb")
+        print(IDENT + "Free size: {0:.2f}".format(
+            int(show_drive.free_size)/1024**3), "Gb")
+        print(IDENT + "File system:",show_drive.file_system)
+        print(IDENT + "Type:", show_drive.drive_type)
+        print(IDENT + "Volume serial:", show_drive.serial)
+        
 
 def scan_volume(path):
     """
@@ -122,19 +118,19 @@ def parse_args():
     """
 
     if (len(sys.argv) == 1):
-        print_help(available_commands)
+        print_help(AVAILABLE_COMMANDS)
         return None
     else:
-        if sys.argv[1].lower() not in available_commands.keys():
-            print_help(available_commands)
+        if sys.argv[1].lower() not in AVAILABLE_COMMANDS.keys():
+            print_help(AVAILABLE_COMMANDS)
             quit()
 
     return sys.argv
 
 
-def print_help(available_commands):
+def print_help(AVAILABLE_COMMANDS):
     print("Available arguments are:")
-    for key, val in available_commands.items():
+    for key, val in AVAILABLE_COMMANDS.items():
         print("    ", key, val)
 
 
@@ -163,10 +159,11 @@ def search_string(search_query):
                 print("Found \""+search_query.strip()+"\" in",
                     len(files_found), "files in", indx_file, "\n")
             elif folders_found:
-                print("Found \""+search_query.strip()+"\"in",
+                print("Found \""+search_query.strip()+"\" in",
                     len(folders_found), "folders in", indx_file, "\n")
             else:
-                print("Nothing found in", indx_file)
+                pass
+                # print("Nothing found in", indx_file, "\n")
 
         # some debugging data in here
         # output_limit = 5  # limits how many search results we print
@@ -208,7 +205,7 @@ if __name__ == "__main__":
                     f"Drive index shoud be a number between 0 and {local_drives_amount - 1}")
         
         t1_start = perf_counter()
-        volume_to_index = Volume(local_drives[local_drive_num])
+        volume_to_index = local_drives[local_drive_num]
         print("\nScanning drive", volume_to_index.caption.rstrip("\\")+"...\nthis might take a few minutes")
 
         list_of_files, list_of_folders, scanned_files_num, scanned_folders_num = scan_volume(volume_to_index.caption)
