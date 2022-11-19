@@ -11,6 +11,7 @@ AVAILABLE_COMMANDS = {
     "-s": "search string in file or folder names in database",
     "-p": "print indexed drives",
     "-r": "remove volume from index database",
+    "--purge": "remove database and index files"
 }
 
 LOCAL_DB = os.path.dirname(__file__) + "\\local.db"
@@ -126,48 +127,6 @@ def write_indexes_to_file(indexes, serial):
 
     return 0
 
-def init_local_db():
-    database = []
-    if os.path.exists(LOCAL_DB):
-        with open(LOCAL_DB, 'rb') as db:
-            try:
-                db_data = pickle.load(db)
-                for obj in db_data:
-                    database.append(obj)
-            except:
-                pass
-    else:
-        new_file = open(LOCAL_DB, 'x')
-        new_file.close()
-    return database
-
-
-def add_to_db(volume):
-    database.append(volume)
-    with open(LOCAL_DB, 'wb') as db:
-       pickle.dump(database, db)
-    
-    print(f"Volume {volume.serial} added to local database")
-
-def remove_from_db(volume):
-    for i in range(len(database)):
-        volume_to_remove = database[i]
-        if volume_to_remove.serial == volume.serial:
-            del database[i]
-            with open(LOCAL_DB, 'wb') as db:
-                pickle.dump(database, db)
-                index_file_path = os.path.dirname(__file__) + "\\"+volume_to_remove.serial+".indx"
-                try:
-                    os.remove(index_file_path)
-                except:
-                    print("Can't remove to file",volume_to_remove.serial,".inx quitting")
-                    quit()
-                print("Volume",volume_to_remove.serial,"removed")
-
-def update_db(volume):
-    pass
-
-            
 
 def parse_args():
     """
@@ -233,6 +192,52 @@ def search_string(search_query):
         #         print(search_results[i])
         #     # this part is not working for now
         #     print("Too many entries to show here, full output in results.txt\n")
+
+# cat_crawler functions to work with local database
+def init_local_db():
+    database = []
+    if os.path.exists(LOCAL_DB):
+        with open(LOCAL_DB, 'rb') as db:
+            try:
+                db_data = pickle.load(db)
+                for obj in db_data:
+                    database.append(obj)
+            except:
+                pass
+    else:
+        new_file = open(LOCAL_DB, 'x')
+        new_file.close()
+    return database
+
+
+def add_to_db(volume):
+    database.append(volume)
+    with open(LOCAL_DB, 'wb') as db:
+       pickle.dump(database, db)
+    
+    print(f"Volume {volume.serial} added to local database")
+
+def remove_from_db(volume):
+    for i in range(len(database)):
+        volume_to_remove = database[i]
+        if volume_to_remove.serial == volume.serial:
+            del_num = i
+        else:
+            return 1
+    
+    del database[del_num]
+    with open(LOCAL_DB, 'wb') as db:
+        pickle.dump(database, db)
+        index_file_path = os.path.dirname(__file__) + "\\"+volume_to_remove.serial+".indx"
+        try:
+            os.remove(index_file_path)
+        except:
+            print("Can't remove to file",volume_to_remove.serial,".inx quitting")
+            quit()
+        print("Volume",volume_to_remove.serial,"removed")
+
+def update_db(volume):
+    pass
 
 
 if __name__ == "__main__":
@@ -320,6 +325,16 @@ if __name__ == "__main__":
             else:
                 print("Volume number is incorrect, try -p for volumes list")
                 quit()
+    elif command == "--purge":
+        question = "Are you sure you want to remove database and index files?\nThis action will only affect this software database, your files and volumes won't be affected\n(y/n) "
+        answer = input(question)
+        if answer.lower() in ['y', 'yes', 'sure']:
+            for i in range(len(database)):
+                remove_from_db(database[i])
+            try:
+                os.remove(LOCAL_DB)
+            except:
+                print("Could'nt remove local.db file, quitting")
 
 
 
