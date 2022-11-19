@@ -2,7 +2,6 @@ import wmi
 import os
 import sys
 import pickle
-
 # to show time by perf_counter()
 from time import perf_counter
 
@@ -10,7 +9,8 @@ AVAILABLE_COMMANDS = {
     "--scan": "scan volume",
     "-l": "print local system drives",
     "-s": "search string in file or folder names in database",
-    "-p": "print indexed drives"
+    "-p": "print indexed drives",
+    "-r": "remove volume from index database",
 }
 
 LOCAL_DB = os.path.dirname(__file__) + "\\local.db"
@@ -69,12 +69,12 @@ def init_drives():
     return local_drives
 
 
-def show_drives(local_drives):
+def show_drives(drives):
     """
-    prints all the local_drives details including name, type and size (in Gbs)
+    prints all the drives details, including name, type and size (in Gbs)
     """
-    for i in range(len(local_drives)):
-        show_drive = local_drives[i]
+    for i in range(len(drives)):
+        show_drive = drives[i]
 
         print(f"\n[#{i}] Disk", show_drive.caption)
         print(IDENT + "Name:", show_drive.volume_name)
@@ -126,43 +126,47 @@ def write_indexes_to_file(indexes, serial):
 
     return 0
 
-def init_local_db(db_file_addr):
-    # might be needed later
-    pass
-
+def init_local_db():
+    database = []
+    if os.path.exists(LOCAL_DB):
+        with open(LOCAL_DB, 'rb') as db:
+            try:
+                db_data = pickle.load(db)
+                for obj in db_data:
+                    database.append(obj)
+            except:
+                pass
+    else:
+        new_file = open(LOCAL_DB, 'x')
+        new_file.close()
+    return database
 
 
 def add_to_db(volume):
-
-    # init_local_db(LOCAL_DB)
-
-    # not sure about this part, looks buggy:
-    # if os.path.exists(LOCAL_DB):
-    #     mode = 'ab'
-    # else:
-    #     mode = 'wb'
-    database = []
     database.append(volume)
     with open(LOCAL_DB, 'wb') as db:
        pickle.dump(database, db)
     
-    
     print(f"Volume {volume.serial} added to local database")
 
-def remove_from_db(serial):
+def remove_from_db(volume):
+    for i in range(len(database)):
+        volume_to_remove = database[i]
+        if volume_to_remove.serial == volume.serial:
+            del database[i]
+            with open(LOCAL_DB, 'wb') as db:
+                pickle.dump(database, db)
+                index_file_path = os.path.dirname(__file__) + "\\"+volume_to_remove.serial+".indx"
+                try:
+                    os.remove(index_file_path)
+                except:
+                    print("Can't remove to file",volume_to_remove.serial,".inx quitting")
+                    quit()
+                print("Volume",volume_to_remove.serial,"removed")
+
+def update_db(volume):
     pass
 
-def update_db(serial):
-    pass
-
-def print_db():
-    database = []
-    with open(LOCAL_DB, 'rb') as db:
-        db_data = pickle.load(db)
-        for obj in db_data:
-            database.append(obj)
-            show_drives(database)
-        
             
 
 def parse_args():
@@ -232,6 +236,9 @@ def search_string(search_query):
 
 
 if __name__ == "__main__":
+
+    database = init_local_db()
+
     if not parse_args():
         quit()
     else:
@@ -259,6 +266,16 @@ if __name__ == "__main__":
         
         t1_start = perf_counter()
         volume_to_index = local_drives[local_drive_num]
+
+        for i in range(len(database)):
+            tmp_volume = database[i]
+            if volume_to_index.serial == tmp_volume.serial:
+                answer = input("This volume was already indexed. Update? (y/n) ")
+                if answer.lower() not in ['y', 'yes', 'sure']:
+                        print("Ok, quitting")
+                        quit()
+                remove_from_db(volume_to_index)
+
         print("\nScanning drive", volume_to_index.caption.rstrip("\\")+"...\nthis might take a few minutes")
 
         list_of_files, list_of_folders, scanned_files_num, scanned_folders_num = scan_volume(volume_to_index.caption)
@@ -284,5 +301,25 @@ if __name__ == "__main__":
         search_string(search_query)
 
     elif command == "-p":
-        print_db()
+        if (len(database)):
+            show_drives(database)
+        else:
+            print("Local database is empty. Scan volumes using --scan")
+
+    elif command == "-r":
+        if len(sys.argv) <= 2:
+            print("Please insert volume # you want to remove from db after -r")
+            quit()
+        else: 
+            if int(sys.argv[2]) <= len(database):
+                volume_to_remove = database[int(sys.argv[2])]
+                question = "Are you sure you want to remove volume "+volume_to_remove.volume_name+" "+volume_to_remove.serial+"? (y/n) "
+                answer = input(question)
+                if answer.lower() in ['y', 'yes', 'sure']:
+                    remove_from_db(volume_to_remove)
+            else:
+                print("Volume number is incorrect, try -p for volumes list")
+                quit()
+
+
 
