@@ -4,8 +4,7 @@ import sys
 import pickle
 # to show time by perf_counter()
 from time import perf_counter
-# regular expressions
-import re
+import argparse
 
 AVAILABLE_COMMANDS = {
     "--scan": "scan volume",
@@ -76,7 +75,7 @@ def show_root_folders(volume):
             path = line.split('\\')
             if len(path) == 3:
                 for i in range(2, len(path)):
-                    if re.search('[s.]', path[i]):
+                    if path[i].find('.') > -1:
                         root_folder = path[i-1]
                         if root_folder not in root_folders and root_folder not in exceptions:
                             root_folders.append(root_folder)
@@ -120,7 +119,8 @@ def scan_volume(path):
             list_of_files.append(os.path.join(root, file) + "\n")
 
     print(f"\nDisk {path} scanned")
-    print(f"    {len(list_of_files)} files and {len(list_of_folders)} folders found\n")
+    print(
+        f"    {len(list_of_files)} files and {len(list_of_folders)} folders found\n")
 
     # amount of files and folders found
     return list_of_files, list_of_folders
@@ -159,6 +159,43 @@ def parse_args():
             quit()
 
     return sys.argv
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-s", "--search",
+                        help="search string \
+                            in file or folder names in database",
+                        type=str,
+                        dest="search",
+                        nargs="+",
+                        action="store_true",
+                        )
+    parser.add_argument("-p",
+                        "--print",
+                        help="print indexed volumes",
+                        action="store_true",
+                        dest='print'
+                        )
+    parser.add_argument("--scan",
+                        help="indexing files and folder for selected volume",
+                        dest="scan",
+                        action="store_true",
+                        )
+    parser.add_argument("-l", "--local",
+                        help="print local system drives",
+                        dest="local",
+                        action="store_true",
+                        )
+    parser.add_argument("-r", "--remove",
+                        help="remove volume from index database",
+                        dest="remove",
+                        type=int,
+                        )
+    parser.add_argument("--purge",
+                        help="remove database and index files",
+                        dest="purge",
+                        type=int,
+                        )
+    parser.parse_args()
 
 
 def print_help():
@@ -200,7 +237,7 @@ def search_string(search_query):
                 pass
                 # print("Nothing found in", indx_file, "\n")
 
-        if len(folders_found):
+        if len(folders_found) or len(files_found):
             show_root_folders(volume)
 
 # cat_crawler functions to work with local database
@@ -300,7 +337,7 @@ if __name__ == "__main__":
         print("\nScanning drive", volume_to_index.caption.rstrip(
             "\\")+"...\nthis might take a few minutes")
 
-        list_of_files, list_of_folders, scanned_files_num, scanned_folders_num = scan_volume(
+        list_of_files, list_of_folders = scan_volume(
             volume_to_index.caption)
 
         write_indexes_to_file(
