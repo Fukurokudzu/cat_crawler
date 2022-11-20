@@ -6,15 +6,6 @@ import pickle
 from time import perf_counter
 import argparse
 
-AVAILABLE_COMMANDS = {
-    "--scan": "scan volume",
-    "-l": "print local system drives",
-    "-s": "<string> search string in file or folder names in database",
-    "-p": "print indexed drives",
-    "-r": "<Volume Number> remove volume from index database",
-    "--purge": "remove database and index files"
-}
-
 LOCAL_DB = os.path.dirname(__file__) + "\\local.db"
 
 DRIVE_TYPES = {
@@ -120,7 +111,8 @@ def scan_volume(path):
 
     print(f"\nDisk {path} scanned")
     print(
-        f"    {len(list_of_files)} files and {len(list_of_folders)} folders found\n")
+        f"    {len(list_of_files)} files and {len(list_of_folders)} \
+        folders found\n")
 
     # amount of files and folders found
     return list_of_files, list_of_folders
@@ -150,16 +142,6 @@ def parse_args():
     Cheking CLI arguments for available comments we can handle
     """
 
-    if (len(sys.argv) == 1):
-        print_help()
-        return None
-    else:
-        if sys.argv[1].lower() not in AVAILABLE_COMMANDS.keys():
-            print_help()
-            quit()
-
-    return sys.argv
-
     parser = argparse.ArgumentParser()
     parser.add_argument("-s", "--search",
                         help="search string \
@@ -167,7 +149,6 @@ def parse_args():
                         type=str,
                         dest="search",
                         nargs="+",
-                        action="store_true",
                         )
     parser.add_argument("-p",
                         "--print",
@@ -189,19 +170,14 @@ def parse_args():
                         help="remove volume from index database",
                         dest="remove",
                         type=int,
+                        nargs=1,
                         )
     parser.add_argument("--purge",
                         help="remove database and index files",
                         dest="purge",
-                        type=int,
+                        action="store_true",
                         )
-    parser.parse_args()
-
-
-def print_help():
-    print("Available arguments are:")
-    for key, val in AVAILABLE_COMMANDS.items():
-        print("    ", key, val)
+    return parser.parse_args()
 
 
 def search_string(search_query):
@@ -296,24 +272,19 @@ def update_db():
 
 if __name__ == "__main__":
 
+    args = parse_args()
     database = init_local_db()
-
-    if not parse_args():
-        quit()
-    else:
-        command = sys.argv[1].lower()
-
     local_drives = init_drives()
-
-    if command == "--scan":
+    
+    # if command == "--scan":
+    if args.scan:
         # scans local drives and creates index file for selected volume
         show_drives(local_drives)
         local_drives_amount = len(local_drives)
 
         while True:
             try:
-                local_drive_num = input(
-                    f"Choose drive you want to index (should be a number between 0 and {local_drives_amount - 1}, q to quit): ")
+                local_drive_num = input(f"Choose drive you want to index (should be a number between 0 and {local_drives_amount - 1}, q to quit): ")
                 if local_drive_num == 'q':
                     print("Let's quit then!")
                     quit()
@@ -321,8 +292,7 @@ if __name__ == "__main__":
                     local_drive_num = int(local_drive_num)
                     break
             except ValueError:
-                print(
-                    f"Drive index shoud be a number between 0 and {local_drives_amount - 1}")
+                print(f"Drive index shoud be a number between 0 and {local_drives_amount - 1}")
 
         t1_start = perf_counter()
         volume_to_index = local_drives[local_drive_num]
@@ -359,12 +329,12 @@ if __name__ == "__main__":
             print("Ok, quitting")
 
     # printing connected system drives
-    elif command == "-l":
+    elif args.local:
         print("\nConnected local_drives:")
         show_drives(local_drives)
 
     # searching for search string in indexed files and folders
-    elif command == "-s":
+    elif args.search:
         if len(sys.argv) <= 2:
             print("Please insert search query after -s")
             quit()
@@ -373,13 +343,13 @@ if __name__ == "__main__":
             search_query += str(sys.argv[i])+" "
         search_string(search_query)
 
-    elif command == "-p":
+    elif args.print:
         if (len(database)):
             show_drives(database)
         else:
             print("Local database is empty. Scan volumes using --scan")
 
-    elif command == "-r":
+    elif args.remove:
         if len(sys.argv) <= 2:
             print("Please insert volume # after -r (use -p to to get volumes list)")
             quit()
@@ -396,8 +366,11 @@ if __name__ == "__main__":
                 print("Volume number is incorrect, use -p to get volumes list")
                 quit()
 
-    elif command == "--purge":
-        question = "Are you sure you want to remove database and index files?\nThis action will only affect this software database, your files and volumes won't be affected\n(y/n) "
+    elif args.purge:
+        question = "Are you sure you want to remove "\
+                "database and index files?\nThis "\
+                "action will only affect this software database, "\
+                "your files and volumes won't be affected\n(y/n) "
         answer = input(question)
         if answer.lower() in ['y', 'yes', 'sure']:
             for i in range(len(database)):
