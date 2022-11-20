@@ -4,6 +4,8 @@ import sys
 import pickle
 # to show time by perf_counter()
 from time import perf_counter
+# regular expressions
+import re
 
 AVAILABLE_COMMANDS = {
     "--scan": "scan volume",
@@ -28,23 +30,9 @@ DRIVE_TYPES = {
 
 IDENT = "    "
 
-class Indexed_Volume:
-    """
-    class for dealing with already indexed volumes
-    """
-
-    def __init__(self):
-        self.caption = ""
-        self.volume_name = ""
-        self.file_system = ""
-        self.drive_type = DRIVE_TYPES[0]
-        self.size = 0
-        self.free_size = 0
-        self.serial = 0
-
 class Volume:
     """
-    class for dealing with system volumes
+    class to deal with volumes
     """
 
     def __init__(self, drive):
@@ -55,6 +43,7 @@ class Volume:
         self.size = drive.Size
         self.free_size = drive.FreeSpace
         self.serial = drive.VolumeSerialNumber
+        self.description = ""
 
 
 def init_drives():
@@ -69,6 +58,22 @@ def init_drives():
         local_drives.append(NewVolume)
     return local_drives
 
+def show_root_folders(volume):
+    root_folders = []
+    file_realpath = os.path.dirname(__file__)+"\\" + volume.serial + ".indx"
+    with open(file_realpath, "r", encoding="utf-8") as indx_file:
+        for line in indx_file.readlines():
+            path = line.split('\\')
+            if len(path) == 3:
+                for i in range(2, len(path)):    
+                    if re.search('[s.]', path[i]):
+                        root_folder = path[i-1]
+                        if root_folder not in root_folders:
+                            root_folders.append(root_folder)
+    if root_folders:
+        print("Root folders of", volume.volume_name, volume.serial+":")
+        for j in range(len(root_folders)):
+            print(IDENT, root_folders[j])
 
 def show_drives(drives):
     """
@@ -154,10 +159,11 @@ def search_string(search_query):
     """
     Crawling throughout .indx files in search of user search query
     """
-    indx_files = [file for file in os.listdir(
-        os.path.dirname(__file__)) if file.endswith('.indx')]
-    for indx_file in indx_files:
-        file_realpath = os.path.dirname(__file__)+"\\"+indx_file
+
+    for i in range(len(database)):
+        volume = database[i]
+
+        file_realpath = os.path.dirname(__file__)+"\\" + volume.serial + ".indx"
         with open(file_realpath, "r", encoding="utf-8") as search_list:
             files_found = []
             folders_found = []
@@ -173,14 +179,17 @@ def search_string(search_query):
                             folders_found.append(folder_found)
             if files_found:
                 print("Found \""+search_query.strip()+"\" in",
-                    len(files_found), "files in", indx_file, "\n")
+                    len(files_found), "files in", volume.serial, "\n")
             elif folders_found:
                 print("Found \""+search_query.strip()+"\" in",
-                    len(folders_found), "folders in", indx_file, "\n")
+                    len(folders_found), "folders in", volume.serial, "\n")
             else:
                 pass
                 # print("Nothing found in", indx_file, "\n")
 
+
+        if len(folders_found):
+            show_root_folders(volume)
         # some debugging data in here
         # output_limit = 5  # limits how many search results we print
         # search_results = files_found + folders_found
@@ -195,6 +204,9 @@ def search_string(search_query):
 
 # cat_crawler functions to work with local database
 def init_local_db():
+    """
+    importing database from local file, or creating one if it's missing
+    """
     database = []
     if os.path.exists(LOCAL_DB):
         with open(LOCAL_DB, 'rb') as db:
@@ -211,6 +223,9 @@ def init_local_db():
 
 
 def add_to_db(volume):
+    """
+    adding volume to local database
+    """
     database.append(volume)
     with open(LOCAL_DB, 'wb') as db:
        pickle.dump(database, db)
@@ -236,9 +251,6 @@ def remove_from_db(volume):
             quit()
         print("Volume",volume_to_remove.serial,"removed")
 
-def update_db(volume):
-    pass
-
 
 if __name__ == "__main__":
 
@@ -252,6 +264,7 @@ if __name__ == "__main__":
     local_drives = init_drives()
 
     if command == "--scan":
+        # scans local drives and creates index file for selected volume
         show_drives(local_drives)
         local_drives_amount = len(local_drives)
 
@@ -285,10 +298,16 @@ if __name__ == "__main__":
 
         list_of_files, list_of_folders, scanned_files_num, scanned_folders_num = scan_volume(volume_to_index.caption)
 
-        write_indexes_to_file(list_of_files, volume_to_index.serial)
+        write_indexes_to_file(list_of_folders + list_of_files, volume_to_index.serial)
         add_to_db(volume_to_index)
         t1_stop = perf_counter()
         print("Scanning finished", "{0:.2f}".format(t1_stop-t1_start), "seconds")
+        # refreshing database data
+        database = init_local_db()
+        # answer = input("You can add description for this volume (or q to quit)")
+        # if answer and answer not "q":
+            
+
 
     # printing connected system drives
     elif command == "-l":
