@@ -6,7 +6,7 @@ import pickle
 from time import perf_counter
 import argparse
 
-LOCAL_DB = os.path.dirname(__file__) + "\\local.db"
+LOCAL_DB = os.path.dirname(__file__) + os.sep + "local.db"
 
 DRIVE_TYPES = {
     0: "Unknown",
@@ -27,7 +27,7 @@ class Volume:
     """
 
     def __init__(self, drive):
-        self.caption = drive.Caption + "\\"
+        self.caption = drive.Caption + os.sep
         self.volume_name = drive.VolumeName
         self.file_system = drive.FileSystem
         self.drive_type = DRIVE_TYPES[drive.DriveType]
@@ -41,6 +41,10 @@ def get_volume_num_by_serial(serial):
     for i in range(len(database)):
         if serial == database[i].serial:
             return i
+    
+    # i = [volume for volume in database if serial == volume.serial]
+    # if i:
+    #     return i
     return None
 
 
@@ -49,21 +53,17 @@ def init_drives():
     initialize OS local_drives
     """
 
-    local_drives = []
     c = wmi.WMI()
-    for drive in c.Win32_LogicalDisk():
-        NewVolume = Volume(drive)
-        local_drives.append(NewVolume)
-    return local_drives
+    return [Volume(drive) for drive in c.Win32_LogicalDisk()]
 
 
 def show_root_folders(volume):
     root_folders = []
     exceptions = ['$RECYCLE.BIN']
-    file_realpath = os.path.dirname(__file__)+"\\" + volume.serial + ".indx"
+    file_realpath = os.path.dirname(__file__) + os.sep + volume.serial + ".indx"
     with open(file_realpath, "r", encoding="utf-8") as indx_file:
         for line in indx_file.readlines():
-            path = line.split('\\')
+            path = line.split(os.sep)
             if len(path) == 3:
                 for i in range(2, len(path)):
                     if path[i].find('.') > -1:
@@ -72,28 +72,28 @@ def show_root_folders(volume):
                             root_folders.append(root_folder)
     if root_folders:
         print("Root folders of", volume.volume_name, volume.serial+":")
-        for j in range(len(root_folders)):
-            print(IDENT, root_folders[j])
+        for folder in root_folders:
+            print(IDENT, folder)
 
 
 def show_drives(drives):
     """
     prints all the drives details, including name, type and size (in Gbs)
     """
-    for i in range(len(drives)):
-        show_drive = drives[i]
-
-        print(f"\n[#{i}] Disk", show_drive.caption)
-        print(IDENT + "Name:", show_drive.volume_name)
+    for drive in drives:
+        i = 0
+        print(f"\n[#{i}] Disk", drive.caption)
+        print(IDENT + "Name:", drive.volume_name)
         print(IDENT + "Size: {0:.2f}".format(
-            int(show_drive.size)/1024**3), "Gb")
+            int(drive.size)/1024**3), "Gb")
         print(IDENT + "Free size: {0:.2f}".format(
-            int(show_drive.free_size)/1024**3), "Gb")
-        print(IDENT + "File system:", show_drive.file_system)
-        print(IDENT + "Type:", show_drive.drive_type)
-        print(IDENT + "Volume serial:", show_drive.serial)
-        print(IDENT + "Description:", show_drive.description)
-
+            int(drive.free_size)/1024**3), "Gb")
+        print(IDENT + "File system:", drive.file_system)
+        print(IDENT + "Type:", drive.drive_type)
+        print(IDENT + "Volume serial:", drive.serial)
+        if drive.description:
+            print(IDENT + "Description:", drive.description)
+        i += 1
 
 def scan_volume(path):
     """
@@ -123,7 +123,7 @@ def write_indexes_to_file(indexes, serial):
     writes list of indexed volume indx_files to .indx file next to the script
     uses volume serial as filename
     """
-    index_file_path = os.path.dirname(__file__) + "\\"+serial+".indx"
+    index_file_path = os.path.dirname(__file__) + os.sep + serial + ".indx"
 
     try:
         with open(index_file_path, "w", encoding="utf-8") as export_file:
@@ -177,6 +177,7 @@ def parse_args():
                         dest="purge",
                         action="store_true",
                         )
+
     return parser.parse_args()
 
 
@@ -184,12 +185,9 @@ def search_string(search_query):
     """
     Crawling throughout .indx files in search of user search query
     """
+    for volume in database:
 
-    for i in range(len(database)):
-        volume = database[i]
-
-        file_realpath = os.path.dirname(
-            __file__)+"\\" + volume.serial + ".indx"
+        file_realpath = os.path.join(os.path.dirname(__file__),volume.serial + '.indx')
         with open(file_realpath, "r", encoding="utf-8") as search_list:
             files_found = []
             folders_found = []
@@ -209,16 +207,14 @@ def search_string(search_query):
             elif folders_found:
                 print("Found \""+search_query.strip()+"\" in",
                       len(folders_found), "folders in", volume.serial, "\n")
-            else:
-                pass
-                # print("Nothing found in", indx_file, "\n")
-
+    
         if len(folders_found) or len(files_found):
             show_root_folders(volume)
+        else:
+            print("Nothing found in volume", volume.serial)
+
 
 # cat_crawler functions to work with local database
-
-
 def init_local_db():
     """
     importing database from local file, or creating one if it's missing
@@ -255,14 +251,14 @@ def remove_from_db(volume):
     with open(LOCAL_DB, 'wb') as db:
         pickle.dump(database, db)
         index_file_path = os.path.dirname(
-            __file__) + "\\"+volume_to_remove.serial+".indx"
+            __file__) + "\\"+volume.serial+".indx"
         try:
             os.remove(index_file_path)
         except:
             print("Can't remove to file",
-                  volume_to_remove.serial, ".inx quitting")
+                  volume.serial, ".inx quitting")
             quit()
-        print("Volume", volume_to_remove.serial, "removed")
+        print("Volume", volume.serial, "removed")
 
 
 def update_db():
@@ -305,7 +301,7 @@ if __name__ == "__main__":
             remove_from_db(volume_to_index)
 
         print("\nScanning drive", volume_to_index.caption.rstrip(
-            "\\")+"...\nthis might take a few minutes")
+            os.sep)+"...\nthis might take a few minutes")
 
         list_of_files, list_of_folders = scan_volume(
             volume_to_index.caption)
@@ -335,13 +331,7 @@ if __name__ == "__main__":
 
     # searching for search string in indexed files and folders
     elif args.search:
-        if len(sys.argv) <= 2:
-            print("Please insert search query after -s")
-            quit()
-        search_query = ""
-        for i in range(2, len(sys.argv)):
-            search_query += str(sys.argv[i])+" "
-        search_string(search_query)
+        search_string(' '.join(args.search))
 
     elif args.print:
         if (len(database)):
@@ -350,21 +340,21 @@ if __name__ == "__main__":
             print("Local database is empty. Scan volumes using --scan")
 
     elif args.remove:
-        if len(sys.argv) <= 2:
-            print("Please insert volume # after -r (use -p to to get volumes list)")
-            quit()
+        # if len(sys.argv) <= 2:
+        #     print("Please insert volume # after -r (use -p to to get volumes list)")
+        #     quit()
+        # else:
+        if int(sys.argv[2]) <= len(database):
+            volume_to_remove = database[int(sys.argv[2])]
+            question = "Are you sure you want to remove volume " + \
+                volume_to_remove.volume_name+" " + \
+                volume_to_remove.serial+"? (y/n) "
+            answer = input(question)
+            if answer.lower() in ['y', 'yes', 'sure']:
+                remove_from_db(volume_to_remove)
         else:
-            if int(sys.argv[2]) <= len(database):
-                volume_to_remove = database[int(sys.argv[2])]
-                question = "Are you sure you want to remove volume " + \
-                    volume_to_remove.volume_name+" " + \
-                    volume_to_remove.serial+"? (y/n) "
-                answer = input(question)
-                if answer.lower() in ['y', 'yes', 'sure']:
-                    remove_from_db(volume_to_remove)
-            else:
-                print("Volume number is incorrect, use -p to get volumes list")
-                quit()
+            print("Volume number is incorrect, use -p to get volumes list")
+            quit()
 
     elif args.purge:
         question = "Are you sure you want to remove "\
