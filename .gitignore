@@ -170,3 +170,4 @@ cython_debug/
 .vscode/launch.json
 Py_snippets.py
 local.db
+.vscode/settings.json

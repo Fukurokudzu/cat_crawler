@@ -19,16 +19,17 @@ AVAILABLE_COMMANDS = {
 LOCAL_DB = os.path.dirname(__file__) + "\\local.db"
 
 DRIVE_TYPES = {
-        0: "Unknown",
-        1: "No Root Directory",
-        2: "Removable Disk",
-        3: "Local Disk",
-        4: "Network Drive",
-        5: "Compact Disc",
-        6: "RAM Disk"
-        }
+    0: "Unknown",
+    1: "No Root Directory",
+    2: "Removable Disk",
+    3: "Local Disk",
+    4: "Network Drive",
+    5: "Compact Disc",
+    6: "RAM Disk"
+}
 
 IDENT = "    "
+
 
 class Volume:
     """
@@ -45,11 +46,13 @@ class Volume:
         self.serial = drive.VolumeSerialNumber
         self.description = ""
 
+
 def get_volume_num_by_serial(serial):
     for i in range(len(database)):
         if serial == database[i].serial:
             return i
     return None
+
 
 def init_drives():
     """
@@ -63,15 +66,16 @@ def init_drives():
         local_drives.append(NewVolume)
     return local_drives
 
+
 def show_root_folders(volume):
     root_folders = []
-    exceptions = ['$RECYCLE']
+    exceptions = ['$RECYCLE.BIN']
     file_realpath = os.path.dirname(__file__)+"\\" + volume.serial + ".indx"
     with open(file_realpath, "r", encoding="utf-8") as indx_file:
         for line in indx_file.readlines():
             path = line.split('\\')
             if len(path) == 3:
-                for i in range(2, len(path)):    
+                for i in range(2, len(path)):
                     if re.search('[s.]', path[i]):
                         root_folder = path[i-1]
                         if root_folder not in root_folders and root_folder not in exceptions:
@@ -80,6 +84,7 @@ def show_root_folders(volume):
         print("Root folders of", volume.volume_name, volume.serial+":")
         for j in range(len(root_folders)):
             print(IDENT, root_folders[j])
+
 
 def show_drives(drives):
     """
@@ -94,10 +99,11 @@ def show_drives(drives):
             int(show_drive.size)/1024**3), "Gb")
         print(IDENT + "Free size: {0:.2f}".format(
             int(show_drive.free_size)/1024**3), "Gb")
-        print(IDENT + "File system:",show_drive.file_system)
+        print(IDENT + "File system:", show_drive.file_system)
         print(IDENT + "Type:", show_drive.drive_type)
         print(IDENT + "Volume serial:", show_drive.serial)
-        print(IDENT + "Description:", show_drive.description)    
+        print(IDENT + "Description:", show_drive.description)
+
 
 def scan_volume(path):
     """
@@ -114,11 +120,10 @@ def scan_volume(path):
             list_of_files.append(os.path.join(root, file) + "\n")
 
     print(f"\nDisk {path} scanned")
-    print(
-        f"    {len(list_of_files)} files and {len(list_of_folders)} folders found\n")
+    print(f"    {len(list_of_files)} files and {len(list_of_folders)} folders found\n")
 
     # amount of files and folders found
-    return list_of_files, list_of_folders, len(list_of_files), len(list_of_folders)
+    return list_of_files, list_of_folders
 
 
 def write_indexes_to_file(indexes, serial):
@@ -170,7 +175,8 @@ def search_string(search_query):
     for i in range(len(database)):
         volume = database[i]
 
-        file_realpath = os.path.dirname(__file__)+"\\" + volume.serial + ".indx"
+        file_realpath = os.path.dirname(
+            __file__)+"\\" + volume.serial + ".indx"
         with open(file_realpath, "r", encoding="utf-8") as search_list:
             files_found = []
             folders_found = []
@@ -186,19 +192,20 @@ def search_string(search_query):
                             folders_found.append(folder_found)
             if files_found:
                 print("Found \""+search_query.strip()+"\" in",
-                    len(files_found), "files in", volume.serial, "\n")
+                      len(files_found), "files in", volume.serial, "\n")
             elif folders_found:
                 print("Found \""+search_query.strip()+"\" in",
-                    len(folders_found), "folders in", volume.serial, "\n")
+                      len(folders_found), "folders in", volume.serial, "\n")
             else:
                 pass
                 # print("Nothing found in", indx_file, "\n")
-
 
         if len(folders_found):
             show_root_folders(volume)
 
 # cat_crawler functions to work with local database
+
+
 def init_local_db():
     """
     importing database from local file, or creating one if it's missing
@@ -224,26 +231,31 @@ def add_to_db(volume):
     """
     database.append(volume)
     with open(LOCAL_DB, 'wb') as db:
-       pickle.dump(database, db)
-    
+        pickle.dump(database, db)
+
     print(f"Volume {volume.serial} added to local database")
+
 
 def remove_from_db(volume):
 
     del database[get_volume_num_by_serial(volume.serial)]
     with open(LOCAL_DB, 'wb') as db:
         pickle.dump(database, db)
-        index_file_path = os.path.dirname(__file__) + "\\"+volume_to_remove.serial+".indx"
+        index_file_path = os.path.dirname(
+            __file__) + "\\"+volume_to_remove.serial+".indx"
         try:
             os.remove(index_file_path)
         except:
-            print("Can't remove to file",volume_to_remove.serial,".inx quitting")
+            print("Can't remove to file",
+                  volume_to_remove.serial, ".inx quitting")
             quit()
-        print("Volume",volume_to_remove.serial,"removed")
+        print("Volume", volume_to_remove.serial, "removed")
+
 
 def update_db():
     with open(LOCAL_DB, 'wb') as db:
-       pickle.dump(database, db)
+        pickle.dump(database, db)
+
 
 if __name__ == "__main__":
 
@@ -274,35 +286,40 @@ if __name__ == "__main__":
             except ValueError:
                 print(
                     f"Drive index shoud be a number between 0 and {local_drives_amount - 1}")
-        
+
         t1_start = perf_counter()
         volume_to_index = local_drives[local_drive_num]
 
         if get_volume_num_by_serial(volume_to_index.serial) != None:
             answer = input("This volume was already indexed. Update? (y/n) ")
             if answer.lower() not in ['y', 'yes', 'sure']:
-                    print("Ok, quitting")
-                    quit()
+                print("Ok, quitting")
+                quit()
             remove_from_db(volume_to_index)
 
-        print("\nScanning drive", volume_to_index.caption.rstrip("\\")+"...\nthis might take a few minutes")
+        print("\nScanning drive", volume_to_index.caption.rstrip(
+            "\\")+"...\nthis might take a few minutes")
 
-        list_of_files, list_of_folders, scanned_files_num, scanned_folders_num = scan_volume(volume_to_index.caption)
+        list_of_files, list_of_folders, scanned_files_num, scanned_folders_num = scan_volume(
+            volume_to_index.caption)
 
-        write_indexes_to_file(list_of_folders + list_of_files, volume_to_index.serial)
+        write_indexes_to_file(
+            list_of_folders + list_of_files, volume_to_index.serial)
         add_to_db(volume_to_index)
         t1_stop = perf_counter()
-        print("Scanning finished", "{0:.2f}".format(t1_stop-t1_start), "seconds")
+        print("Scanning finished", "{0:.2f}".format(
+            t1_stop-t1_start), "seconds")
 
         # refreshing database data
         database = init_local_db()
-        answer = input("You can add description for this volume (or q to quit): ")
+        answer = input(
+            "You can add description for this volume (or q to quit): ")
         if answer and answer.lower() not in "q":
-            database[get_volume_num_by_serial(volume_to_index.serial)].description = str(answer)
+            database[get_volume_num_by_serial(
+                volume_to_index.serial)].description = str(answer)
             update_db()
         else:
             print("Ok, quitting")
-
 
     # printing connected system drives
     elif command == "-l":
@@ -329,17 +346,19 @@ if __name__ == "__main__":
         if len(sys.argv) <= 2:
             print("Please insert volume # after -r (use -p to to get volumes list)")
             quit()
-        else: 
+        else:
             if int(sys.argv[2]) <= len(database):
                 volume_to_remove = database[int(sys.argv[2])]
-                question = "Are you sure you want to remove volume "+volume_to_remove.volume_name+" "+volume_to_remove.serial+"? (y/n) "
+                question = "Are you sure you want to remove volume " + \
+                    volume_to_remove.volume_name+" " + \
+                    volume_to_remove.serial+"? (y/n) "
                 answer = input(question)
                 if answer.lower() in ['y', 'yes', 'sure']:
                     remove_from_db(volume_to_remove)
             else:
                 print("Volume number is incorrect, use -p to get volumes list")
                 quit()
-                
+
     elif command == "--purge":
         question = "Are you sure you want to remove database and index files?\nThis action will only affect this software database, your files and volumes won't be affected\n(y/n) "
         answer = input(question)
@@ -350,6 +369,3 @@ if __name__ == "__main__":
                 os.remove(LOCAL_DB)
             except:
                 print("Could'nt remove local.db file, quitting")
-
-
-
