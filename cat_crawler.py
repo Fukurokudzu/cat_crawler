@@ -146,17 +146,17 @@ def parse_args():
     """
 
     if (len(sys.argv) == 1):
-        print_help(AVAILABLE_COMMANDS)
+        print_help()
         return None
     else:
         if sys.argv[1].lower() not in AVAILABLE_COMMANDS.keys():
-            print_help(AVAILABLE_COMMANDS)
+            print_help()
             quit()
 
     return sys.argv
 
 
-def print_help(AVAILABLE_COMMANDS):
+def print_help():
     print("Available arguments are:")
     for key, val in AVAILABLE_COMMANDS.items():
         print("    ", key, val)
@@ -229,14 +229,8 @@ def add_to_db(volume):
     print(f"Volume {volume.serial} added to local database")
 
 def remove_from_db(volume):
-    for i in range(len(database)):
-        volume_to_remove = database[i]
-        if volume_to_remove.serial == volume.serial:
-            del_num = i
-        else:
-            return 1
-    
-    del database[del_num]
+
+    del database[get_volume_num_by_serial(volume.serial)]
     with open(LOCAL_DB, 'wb') as db:
         pickle.dump(database, db)
         index_file_path = os.path.dirname(__file__) + "\\"+volume_to_remove.serial+".indx"
