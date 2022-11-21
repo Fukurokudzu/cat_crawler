@@ -259,7 +259,6 @@ def remove_from_db(volume):
                   volume.serial, ".inx quitting")
             quit()
         print("Volume", volume.serial, "removed")
-    
 
 
 def update_db():
@@ -349,7 +348,8 @@ def purge(args):
             "your files and volumes won't be affected\n(y/n) "
     answer = input(question)
     if answer.lower() in ['y', 'yes', 'sure']:
-        for volume_to_remove in database:
+        tmp_database = database.copy()
+        for volume_to_remove in tmp_database:
             remove_from_db(volume_to_remove)
         try:
             os.remove(LOCAL_DB)
