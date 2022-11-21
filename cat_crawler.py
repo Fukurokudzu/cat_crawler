@@ -174,10 +174,9 @@ def parse_args():
     parser6.add_argument("volume_num",
                         help="number of indexed volume",
                         type=int,
-                        nargs=1,
                         choices=range(0, len(database))
                         )
-    parser6.set_defaults(func = remove_indexed_volume)
+    parser6.set_defaults(func=remove_indexed_volume)
 
     return parser.parse_args()
 
@@ -248,7 +247,6 @@ def add_to_db(volume):
 
 
 def remove_from_db(volume):
-
     del database[get_volume_num_by_serial(volume.serial)]
     with open(LOCAL_DB, 'wb') as db:
         pickle.dump(database, db)
@@ -261,6 +259,7 @@ def remove_from_db(volume):
                   volume.serial, ".inx quitting")
             quit()
         print("Volume", volume.serial, "removed")
+    
 
 
 def update_db():
@@ -350,29 +349,25 @@ def purge(args):
             "your files and volumes won't be affected\n(y/n) "
     answer = input(question)
     if answer.lower() in ['y', 'yes', 'sure']:
-        for volume in database:
-            remove_from_db(volume)
+        for volume_to_remove in database:
+            remove_from_db(volume_to_remove)
         try:
             os.remove(LOCAL_DB)
         except:
             print("Could'nt remove local.db file, quitting")
 
 def remove_indexed_volume(args):
-        # if len(sys.argv) <= 2:
-        #     print("Please insert volume # after -r (use -p to to get volumes list)")
-        #     quit()
-        # else:
-    if int(sys.argv[2]) <= len(database):
-        volume_to_remove = database[int(sys.argv[2])]
-        question = "Are you sure you want to remove volume " + \
-            volume_to_remove.volume_name+" " + \
-            volume_to_remove.serial+"? (y/n) "
-        answer = input(question)
-        if answer.lower() in ['y', 'yes', 'sure']:
-            remove_from_db(volume_to_remove)
-    else:
-        print("Volume number is incorrect, use -p to get volumes list")
-        quit()
+
+    #     print("Please insert volume # after -r (use -p to to get volumes list)")
+    #     print("Volume number is incorrect, use -p to get volumes list")
+    volume_to_remove = database[args.volume_num]
+    question = "Are you sure you want to remove volume " + \
+        volume_to_remove.volume_name+" " + \
+        volume_to_remove.serial+"? (y/n) "
+    answer = input(question)
+    if answer.lower() in ['y', 'yes', 'sure']:
+        remove_from_db(volume_to_remove)
+
 
 if __name__ == "__main__":
 
