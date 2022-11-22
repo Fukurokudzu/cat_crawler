@@ -141,9 +141,8 @@ def scan_volume(path):
                                        + os.path.join(root, folder) + "\n")
 
     print(f"\nDisk {path} scanned")
-    print(
-        f"    {len(list_of_files)} files and {len(list_of_folders)} \
-        folders found\n")
+    print(f"{INDENT}{len(list_of_files)} files and "
+          f"{len(list_of_folders)} folders found\n")
 
     # amount of files and folders found
     return list_of_files, list_of_folders
