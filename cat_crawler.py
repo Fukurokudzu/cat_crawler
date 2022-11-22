@@ -19,6 +19,9 @@ DRIVE_TYPES = {
 }
 
 IDENT = "\t"
+SHORT_SEARCH_RESULTS_LIMIT = 5
+LONG_SEARCH_RESULTS_LIMIT = 50
+EXCEPTIONS = ['$RECYCLE.BIN']
 
 
 class Volume:
@@ -28,7 +31,7 @@ class Volume:
 
     def __init__(self, drive):
         self.caption = drive.Caption + os.sep
-        self.volume_name = drive.VolumeName
+        self.name = drive.VolumeName
         self.file_system = drive.FileSystem
         self.drive_type = DRIVE_TYPES[drive.DriveType]
         self.size = drive.Size
@@ -43,10 +46,7 @@ def get_volume_num_by_serial(serial):
     """
     i = [count for count, volume in enumerate(database)
                             if serial == volume.serial]
-    if i:
-        return i[0]
-    return None
-
+    return i[0] if i else None
 
 def init_drives():
     """
@@ -62,20 +62,20 @@ def show_root_folders(volume):
     Showing root folders for selected volume
     """
     root_folders = []
-    exceptions = ['$RECYCLE.BIN']
     file_realpath = os.path.dirname(__file__) + os.sep \
                                 + volume.serial + ".indx"
     with open(file_realpath, "r", encoding="utf-8") as indx_file:
         for line in indx_file.readlines():
-            line_type = line.split("*")[0]
-            path = line.split("*")[1].split(os.sep)
-            if line_type == "d" and len(path) == 3:
-                root_folder = path[1]
+            line_type, path = parse_indx_line(line)
+            # print (line_type, path)
+            path_segments = path.split(os.sep)
+            if line_type == "d" and len(path_segments) == 2:
+                root_folder = path
                 if root_folder not in root_folders and \
-                        root_folder not in exceptions:
+                        root_folder not in EXCEPTIONS:
                     root_folders.append(root_folder)
     if root_folders:
-        print("Root folders of", volume.volume_name, volume.serial+":")
+        print("\nRoot folders of", volume.name, volume.serial+":")
         for folder in root_folders:
             print(IDENT, folder)
 
@@ -85,9 +85,8 @@ def show_drives(drives):
     prints all the drives details, including name, type and size (in Gbs)
     """
     for count, drive in enumerate(drives):
-
         print(f"\n[#{count}] Volume {drive.caption}")
-        print(IDENT + "Name:", drive.volume_name)
+        print(IDENT + "Name:", drive.name)
         print(IDENT + "Size: {0:.2f}".format(
             int(drive.size)/1024**3), "Gb")
         print(IDENT + "Free size: {0:.2f}".format(
@@ -99,6 +98,25 @@ def show_drives(drives):
             print(IDENT + "Description:", drive.description)
 
 
+def show_volume(volume):
+    """
+    prints volume details, including name, type and size (in Gbs)
+    """
+    print(f"\nVolume {volume.caption}")
+    print(IDENT + "Name:", volume.name)
+    print(IDENT + "Size: {0:.2f}".format(
+        int(volume.size)/1024**3), "Gb")
+    print(IDENT + "Free size: {0:.2f}".format(
+        int(volume.free_size)/1024**3), "Gb")
+    print(IDENT + "File system:", volume.file_system)
+    print(IDENT + "Type:", volume.drive_type)
+    print(IDENT + "Volume serial:", volume.serial)
+    if volume.description:
+        print(IDENT + "Description:", volume.description)
+
+    show_root_folders(volume)
+
+
 def scan_volume(path):
     """
     Creates list of indxfiles for selected path
@@ -108,10 +126,14 @@ def scan_volume(path):
 
     # os.walk returns dirpath, dirnames, filenames
     for root, dirs, indx_files in os.walk(path):
-        for folder in dirs:
-            list_of_folders.append("d*" + os.path.join(root, folder) + "\n")
         for file in indx_files:
-            list_of_files.append("f*" + os.path.join(root, file) + "\n")
+            if file not in EXCEPTIONS:
+                list_of_files.append("f*" + os.path.join(root, file) + "\n")
+
+        for folder in dirs:
+            if folder not in EXCEPTIONS:
+                list_of_folders.append("d*" + os.path.join(root, folder) + "\n")
+        
 
     print(f"\nDisk {path} scanned")
     print(
@@ -150,8 +172,17 @@ def parse_args():
  
     subparsers = parser.add_subparsers(help="Commands")
 
-    parser_1 = subparsers.add_parser("print", help="print indexed volumes")
-    parser_1.set_defaults(func=print_drives)
+    parser1 = subparsers.add_parser("print", help="print indexed volumes")
+    parser1.set_defaults(func=print_drives)
+    
+    choice = range(0, len(database)) if len(database) > 1 else ['0']
+
+    parser1.add_argument("indexed_volume_num",
+                        help="number of indexed volume",
+                        type=int,
+                        choices=choice,
+                        nargs='?'
+                        )
 
     parser2 = subparsers.add_parser("local", help="print local system drives")
     parser2.set_defaults(func=show_local)
@@ -181,38 +212,109 @@ def parse_args():
     return parser.parse_args()
 
 
+def parse_indx_line(line):
+    path = line.split("*")[1].strip()
+    line_type = line.split("*")[0]
+    return line_type, path
+
+def parse_results_line(line):
+    path = line.split("*")[1].strip()
+    serial = line.split("*")[0]
+    return serial, path
+
 def search_string(args):
     """
     Crawling throughout .indx files in search of user search query
     """
     search_query = " ".join(args.search_string)
-    for volume in database:
+    volumes_nums_found = []
+    results = []
+    results_count = {}
+    for count, volume in enumerate(database):
         file_realpath = os.path.join(os.path.dirname(__file__),
                         volume.serial + '.indx')
         with open(file_realpath, "r", encoding="utf-8") as search_list:
             files_found = []
-            folders_found = []
-            current_dir = ""
+            dirs_found = []
             for line in search_list.readlines():
-                if search_query.strip() in line:
-                    folder_found, file_found = os.path.split(line)
-                    if search_query.strip() in file_found:
-                        files_found.append(line)
-                    if search_query.strip() in folder_found:
-                        if folder_found != current_dir:
-                            current_dir = folder_found
-                            folders_found.append(folder_found)
-            if files_found:
-                print("Found \""+search_query.strip()+"\" in",
-                      len(files_found), "files in", volume.serial, "\n")
-            elif folders_found:
-                print("Found \""+search_query.strip()+"\" in",
-                      len(folders_found), "folders in", volume.serial, "\n")
+                if search_query in line:
+                    line_type, path = parse_indx_line(line)
+                    tmp_path = path.split(os.sep)
+                    time_to_stop = None
+                    for p in tmp_path:
+                        if p in EXCEPTIONS:
+                            time_to_stop = 1
+                    if time_to_stop:
+                        break
+                    if line_type == "f":
+                        files_found.append(volume.serial + "*" + path)
+                    elif line_type == "d":
+                        dirs_found.append(volume.serial + "*" + path)
 
-        if len(folders_found) or len(files_found):
-            show_root_folders(volume)
+            if files_found or dirs_found:
+                results_count[volume.serial] = [len(files_found),
+                                                    len(dirs_found)]
+                print(f"\nVOLUME #{count}: {volume.name} {volume.serial}")
+                volumes_nums_found.append(count)
+          
+            if files_found:
+                results.append(files_found)
+                print("\n", IDENT, "Found \""+search_query+"\" in",
+                      len(files_found), "files")
+                for i in files_found[:SHORT_SEARCH_RESULTS_LIMIT]:
+                    print(IDENT, parse_results_line(i)[1])
+                if len(files_found) > SHORT_SEARCH_RESULTS_LIMIT:
+                    print(IDENT, "... and",
+                            len(files_found)-SHORT_SEARCH_RESULTS_LIMIT-1,"more")
+
+
+            if dirs_found:
+                results.append(dirs_found)
+                print("\n", IDENT, "Found \""+search_query+"\" in",
+                      len(dirs_found), "folders")
+                
+                for j in dirs_found[:SHORT_SEARCH_RESULTS_LIMIT]:
+                    print(IDENT, parse_results_line(j)[1])
+                if len(dirs_found) > SHORT_SEARCH_RESULTS_LIMIT:
+                    print(IDENT, "... and",
+                            len(dirs_found)-SHORT_SEARCH_RESULTS_LIMIT, "more")
+    
+    if volumes_nums_found:
+        while True:
+            try:
+                message = (
+                        f"\nChoose volume to see results "
+                        f"(one of {volumes_nums_found}, q to quit): ")
+                volume_num = input(message)
+                if volume_num == 'q':
+                    print("Let's quit then!")
+                    quit()
+                elif int(volume_num) in volumes_nums_found:
+                    volume_num = int(volume_num)
+                    break
+            except ValueError:
+                print(f"Volume index shoud be in {volumes_nums_found}")
+        
+        show_volume(database[volume_num])
+        files_found, dirs_found = results_count[database[volume_num].serial]
+        if files_found < LONG_SEARCH_RESULTS_LIMIT \
+                and dirs_found < LONG_SEARCH_RESULTS_LIMIT:
+            print_search_results(database[volume_num].serial, results)
         else:
-            print("Nothing found in volume", volume.serial)
+            
+            print("There are too many results, dump in file path.txt")
+
+    if not volumes_nums_found:
+        print("Nothing found in local database")
+
+
+def print_search_results(serial, results):
+    print("\nFiles and folders found on this volume:")
+    for line in results:
+        for i in line:
+            res_serial, path = parse_results_line(i)
+            if res_serial == serial:
+                print(IDENT + path)
 
 
 # cat_crawler functions to work with local database
@@ -261,15 +363,18 @@ def remove_from_db(volume):
         print("Volume", volume.serial, "removed")
 
 
-def update_db():
+def update_db(database):
     with open(LOCAL_DB, 'wb') as db:
         pickle.dump(database, db)
 
 
 def print_drives(args):
     if (len(database)):
-        print("Indexed volumes in database:")
-        show_drives(database)
+        if args.indexed_volume_num is not None:
+            show_volume(database[args.indexed_volume_num])
+        else:
+            print("Indexed volumes in database:")
+            show_drives(database)
     else:
         print("Local database is empty. Scan volumes using \"scan\"")
 
@@ -279,6 +384,7 @@ def show_local(args):
     local_drives = init_drives()
     print("\nConnected local_drives:")
     show_drives(local_drives)
+
 
 def scan(args):
     """
@@ -291,8 +397,8 @@ def scan(args):
     while True:
         try:
             message = (
-                f"Choose drive you want to index"
-                f"(should be a number between 0"
+                f"Choose drive you want to index "
+                f"(should be a number between 0 "
                 f"and {local_drives_amount - 1}, q to quit): "
             )
             local_drive_num = input(message)
@@ -309,7 +415,7 @@ def scan(args):
     t1_start = perf_counter()
     volume_to_index = local_drives[local_drive_num]
 
-    if get_volume_num_by_serial(volume_to_index.serial) != None:
+    if get_volume_num_by_serial(volume_to_index.serial) is not None:
         answer = input("This volume was already indexed. Update? (y/n) ")
         if answer.lower() not in ['y', 'yes', 'sure']:
             print("Ok, quitting")
@@ -336,7 +442,7 @@ def scan(args):
     if answer and answer.lower() not in "q":
         database[get_volume_num_by_serial(
             volume_to_index.serial)].description = str(answer)
-        update_db()
+        update_db(database)
     else:
         print("Ok, quitting")
 
@@ -358,11 +464,9 @@ def purge(args):
 
 def remove_indexed_volume(args):
 
-    #     print("Please insert volume # after -r (use -p to to get volumes list)")
-    #     print("Volume number is incorrect, use -p to get volumes list")
     volume_to_remove = database[args.volume_num]
     question = "Are you sure you want to remove volume " + \
-        volume_to_remove.volume_name+" " + \
+        volume_to_remove.name+" " + \
         volume_to_remove.serial+"? (y/n) "
     answer = input(question)
     if answer.lower() in ['y', 'yes', 'sure']:
