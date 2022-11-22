@@ -1,7 +1,7 @@
 import os
 import sys
 import pickle
-from time import perf_counter
+from time import perf_counter, sleep
 from datetime import datetime
 import argparse
 import wmi
@@ -170,7 +170,6 @@ def parse_args():
     """
 
     parser = argparse.ArgumentParser()
-
     subparsers = parser.add_subparsers(help="Commands")
 
     parser1 = subparsers.add_parser("print", help="print indexed volumes")
@@ -211,6 +210,10 @@ def parse_args():
                          choices=range(0, len(database))
                          )
     parser6.set_defaults(func=remove_indexed_volume)
+
+    if len(sys.argv) == 1:
+        parser.print_help(sys.stderr)
+        quit()
 
     return parser.parse_args()
 
@@ -300,37 +303,48 @@ def search_string(args):
             except ValueError:
                 print(f"Volume index shoud be in {volumes_nums_found}")
 
-        show_volume(database[volume_num])
         n_results = normalize_search_results(database[volume_num].serial,
                                              results)
 
         files_found, dirs_found = results_count[database[volume_num].serial]
         if files_found < LONG_SEARCH_RESULTS_LIMIT \
                 and dirs_found < LONG_SEARCH_RESULTS_LIMIT:
+            print("You were looking for \"", search_query, "\"")
+            show_volume(database[volume_num])
+            print("\nFiles and folders found on this volume:")
             for line in n_results:
                 print(IDENT + line)
         else:
             now = datetime.now()
             dt = now.strftime("%d%m%Y_%H%M%S")
+            file_path = "search_" + dt + ".txt"
             file_realpath = os.path.dirname(__file__) + os.sep + \
                 "search_" + dt + ".txt"
+            old_stdout = sys.stdout
+            print("Too many results found")
+            sleep(1)
+            print(file_realpath, "created")
+            sleep(1)
+            print("Opening file in text editor...")
+            sleep(1)
             try:
-                with open(file_realpath, "w", encoding="utf-8") \
-                        as out_file:
-                    for items in n_results:
-                        out_file.writelines(items + "\n")
-                print(f"There are too many results,"
-                      f"dump in {file_realpath} created")
+                sys.stdout = open(file_path, 'w', encoding="utf-8")
+                print("You were looking for \"", search_query, "\"")
+                show_volume(database[volume_num])
+                print("\nFiles and folders found on this volume:")
+                for items in n_results:
+                    sys.stdout.writelines(items + "\n")
+                sys.stdout.close()
+                sys.stdout = old_stdout
                 os.system(file_realpath)
             except:
-                print("Couln't create search file")
+                print("Couln't create search results file")
 
     if not volumes_nums_found:
         print("Nothing found in local database")
 
 
 def normalize_search_results(serial, results):
-    print("\nFiles and folders found on this volume:")
     n_list = []
     for line in results:
         for i in line:
@@ -339,7 +353,7 @@ def normalize_search_results(serial, results):
                 n_list.append(path)
     return n_list
 
-# cat_crawler functions to work with local database
+
 def init_local_db():
     """
     importing database from local file, or creating one if it's missing
@@ -499,8 +513,5 @@ def remove_indexed_volume(args):
 if __name__ == "__main__":
 
     database = init_local_db()
-    if len(sys.argv) > 1:
-        args = parse_args()
-        args.func(args)
-    else:
-        print("You can find available commands using -h")
+    args = parse_args()
+    args.func(args)
