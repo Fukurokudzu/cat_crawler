@@ -38,6 +38,7 @@ class Volume:
         self.free_size = drive.FreeSpace
         self.serial = drive.VolumeSerialNumber
         self.description = ""
+        self.indexed = ""
 
 
 def get_volume_num_by_serial(serial):
@@ -87,6 +88,8 @@ def show_drives(drives):
     """
     for count, drive in enumerate(drives):
         print(f"\n[#{count}] Volume {drive.caption}")
+        if drive.indexed:
+            print(IDENT + "Indexed on:", drive.indexed)
         print(IDENT + "Name:", drive.name)
         print(IDENT + "Size: {0:.2f}".format(
             int(drive.size) / 1024**3), "Gb")
@@ -97,6 +100,7 @@ def show_drives(drives):
         print(IDENT + "Volume serial:", drive.serial)
         if drive.description:
             print(IDENT + "Description:", drive.description)
+        
 
 
 def show_volume(volume):
@@ -104,6 +108,8 @@ def show_volume(volume):
     prints volume details, including name, type and size (in Gbs)
     """
     print(f"\nVolume {volume.caption}")
+    if volume.indexed:
+            print(IDENT + "Indexed on:", volume.indexed)
     print(IDENT + "Name:", volume.name)
     print(IDENT + "Size: {0:.2f}".format(
         int(volume.size) / 1024**3), "Gb")
@@ -207,7 +213,8 @@ def parse_args():
     parser6.add_argument("volume_num",
                          help="number of indexed volume",
                          type=int,
-                         choices=range(0, len(database))
+                         choices=range(0, len(database)),
+                         nargs="?",
                          )
     parser6.set_defaults(func=remove_indexed_volume)
 
@@ -466,6 +473,9 @@ def scan(args):
 
     write_indexes_to_file(
         list_of_folders + list_of_files, volume_to_index.serial)
+    now = datetime.now()
+    dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
+    volume_to_index.indexed = dt_string
     add_to_db(volume_to_index)
     t1_stop = perf_counter()
     print("Scanning finished", "{0:.2f}".format(
@@ -500,15 +510,25 @@ def purge(args):
 
 
 def remove_indexed_volume(args):
+    if args.volume_num is not None:
+        volume_to_remove = database[args.volume_num]
+        ask_to_remove(volume_to_remove)     
+    else:
+        show_drives(database)
+        message = (
+                f"Choose volume you want to remove "
+                f"(should be a number between 0 "
+                f"and {len(database) - 1}, q to quit): ")
+        a = input(message)
+        ask_to_remove(database[int(a)])
 
-    volume_to_remove = database[args.volume_num]
+def ask_to_remove(volume):
     question = "Are you sure you want to remove volume " + \
-        volume_to_remove.name+" " + \
-        volume_to_remove.serial+"? (y/n) "
+            volume.name+" " + \
+            volume.serial+"? (y/n) "
     answer = input(question)
     if answer.lower() in ['y', 'yes', 'sure']:
-        remove_from_db(volume_to_remove)
-
+        remove_from_db(volume)
 
 if __name__ == "__main__":
 
