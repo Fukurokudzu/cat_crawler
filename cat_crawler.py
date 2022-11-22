@@ -100,7 +100,6 @@ def show_drives(drives):
         print(IDENT + "Volume serial:", drive.serial)
         if drive.description:
             print(IDENT + "Description:", drive.description)
-        
 
 
 def show_volume(volume):
@@ -109,7 +108,7 @@ def show_volume(volume):
     """
     print(f"\nVolume {volume.caption}")
     if volume.indexed:
-            print(IDENT + "Indexed on:", volume.indexed)
+        print(IDENT + "Indexed on:", volume.indexed)
     print(IDENT + "Name:", volume.name)
     print(IDENT + "Size: {0:.2f}".format(
         int(volume.size) / 1024**3), "Gb")
@@ -163,7 +162,7 @@ def write_indexes_to_file(indexes, serial):
             export_file.writelines(indexes)
     except:
         print("Can't write to file, quitting")
-        quit()
+        sys.exit()
 
     print("File", index_file_path, "created")
 
@@ -220,7 +219,7 @@ def parse_args():
 
     if len(sys.argv) == 1:
         parser.print_help(sys.stderr)
-        quit()
+        sys.exit()
 
     return parser.parse_args()
 
@@ -303,7 +302,7 @@ def search_string(args):
                 volume_num = input(message)
                 if volume_num == 'q':
                     print("Let's quit then!")
-                    quit()
+                    sys.exit()
                 elif int(volume_num) in volumes_nums_found:
                     volume_num = int(volume_num)
                     break
@@ -402,7 +401,7 @@ def remove_from_db(volume):
         except FileNotFoundError:
             print("Can't remove to file",
                   volume.serial, ".inx quitting")
-            quit()
+            sys.exit()
         print("Volume", volume.serial, "removed")
 
 
@@ -447,7 +446,7 @@ def scan(args):
             local_drive_num = input(message)
             if local_drive_num == 'q':
                 print("Let's quit then!")
-                quit()
+                sys.exit()
             elif int(local_drive_num) in range(local_drives_amount):
                 local_drive_num = int(local_drive_num)
                 break
@@ -462,7 +461,7 @@ def scan(args):
         answer = input("This volume was already indexed. Update? (y/n) ")
         if answer.lower() not in ['y', 'yes', 'sure']:
             print("Ok, quitting")
-            quit()
+            sys.exit()
         remove_from_db(volume_to_index)
 
     print("\nScanning drive", volume_to_index.caption.rstrip(
@@ -512,7 +511,7 @@ def purge(args):
 def remove_indexed_volume(args):
     if args.volume_num is not None:
         volume_to_remove = database[args.volume_num]
-        ask_to_remove(volume_to_remove)     
+        ask_to_remove(volume_to_remove)
     else:
         show_drives(database)
         message = (
@@ -522,6 +521,7 @@ def remove_indexed_volume(args):
         a = input(message)
         ask_to_remove(database[int(a)])
 
+
 def ask_to_remove(volume):
     question = "Are you sure you want to remove volume " + \
             volume.name+" " + \
@@ -529,6 +529,7 @@ def ask_to_remove(volume):
     answer = input(question)
     if answer.lower() in ['y', 'yes', 'sure']:
         remove_from_db(volume)
+
 
 if __name__ == "__main__":
 
