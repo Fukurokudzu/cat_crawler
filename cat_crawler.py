@@ -18,7 +18,7 @@ DRIVE_TYPES = {
     6: "RAM Disk"
 }
 
-IDENT = "\t"
+INDENT = "\t"
 SHORT_SEARCH_RESULTS_LIMIT = 5
 LONG_SEARCH_RESULTS_LIMIT = 50
 EXCEPTIONS = ['$RECYCLE.BIN']
@@ -69,7 +69,6 @@ def show_root_folders(volume):
     with open(file_realpath, "r", encoding="utf-8") as indx_file:
         for line in indx_file.readlines():
             line_type, path = parse_indx_line(line)
-            # print (line_type, path)
             path_segments = path.split(os.sep)
             if line_type == "d" and len(path_segments) == 2:
                 root_folder = path
@@ -79,7 +78,7 @@ def show_root_folders(volume):
     if root_folders:
         print("\nRoot folders of", volume.name, volume.serial + ":")
         for folder in root_folders:
-            print(IDENT, folder)
+            print(INDENT, folder)
 
 
 def show_drives(drives):
@@ -89,17 +88,17 @@ def show_drives(drives):
     for count, drive in enumerate(drives):
         print(f"\n[#{count}] Volume {drive.caption}")
         if drive.indexed:
-            print(IDENT + "Indexed on:", drive.indexed)
-        print(IDENT + "Name:", drive.name)
-        print(IDENT + "Size: {0:.2f}".format(
+            print(INDENT + "Indexed on:", drive.indexed)
+        print(INDENT + "Name:", drive.name)
+        print(INDENT + "Size: {0:.2f}".format(
             int(drive.size) / 1024**3), "Gb")
-        print(IDENT + "Free size: {0:.2f}".format(
+        print(INDENT + "Free size: {0:.2f}".format(
             int(drive.free_size) / 1024**3), "Gb")
-        print(IDENT + "File system:", drive.file_system)
-        print(IDENT + "Type:", drive.drive_type)
-        print(IDENT + "Volume serial:", drive.serial)
+        print(INDENT + "File system:", drive.file_system)
+        print(INDENT + "Type:", drive.drive_type)
+        print(INDENT + "Volume serial:", drive.serial)
         if drive.description:
-            print(IDENT + "Description:", drive.description)
+            print(INDENT + "Description:", drive.description)
 
 
 def show_volume(volume):
@@ -108,17 +107,17 @@ def show_volume(volume):
     """
     print(f"\nVolume {volume.caption}")
     if volume.indexed:
-        print(IDENT + "Indexed on:", volume.indexed)
-    print(IDENT + "Name:", volume.name)
-    print(IDENT + "Size: {0:.2f}".format(
+        print(INDENT + "Indexed on:", volume.indexed)
+    print(INDENT + "Name:", volume.name)
+    print(INDENT + "Size: {0:.2f}".format(
         int(volume.size) / 1024**3), "Gb")
-    print(IDENT + "Free size: {0:.2f}".format(
+    print(INDENT + "Free size: {0:.2f}".format(
         int(volume.free_size) / 1024**3), "Gb")
-    print(IDENT + "File system:", volume.file_system)
-    print(IDENT + "Type:", volume.drive_type)
-    print(IDENT + "Volume serial:", volume.serial)
+    print(INDENT + "File system:", volume.file_system)
+    print(INDENT + "Type:", volume.drive_type)
+    print(INDENT + "Volume serial:", volume.serial)
     if volume.description:
-        print(IDENT + "Description:", volume.description)
+        print(INDENT + "Description:", volume.description)
 
     show_root_folders(volume)
 
@@ -273,23 +272,23 @@ def search_string(args):
 
             if dirs_found:
                 results.append(dirs_found)
-                print("\n", IDENT, "Found \""+search_query+"\" in",
+                print("\n", INDENT, "Found \""+search_query+"\" in",
                       len(dirs_found), "folders")
 
                 for j in dirs_found[:SHORT_SEARCH_RESULTS_LIMIT]:
-                    print(IDENT, parse_results_line(j)[1])
+                    print(INDENT, parse_results_line(j)[1])
                 if len(dirs_found) > SHORT_SEARCH_RESULTS_LIMIT:
-                    print(IDENT, "... and",
+                    print(INDENT, "... and",
                           len(dirs_found)-SHORT_SEARCH_RESULTS_LIMIT, "more")
 
             if files_found:
                 results.append(files_found)
-                print("\n", IDENT, "Found \""+search_query+"\" in",
+                print("\n", INDENT, "Found \""+search_query+"\" in",
                       len(files_found), "files")
                 for i in files_found[:SHORT_SEARCH_RESULTS_LIMIT]:
-                    print(IDENT, parse_results_line(i)[1])
+                    print(INDENT, parse_results_line(i)[1])
                 if len(files_found) > SHORT_SEARCH_RESULTS_LIMIT:
-                    print(IDENT, "... and",
+                    print(INDENT, "... and",
                           len(files_found)-SHORT_SEARCH_RESULTS_LIMIT-1,
                           "more")
 
@@ -319,7 +318,7 @@ def search_string(args):
             show_volume(database[volume_num])
             print("\nFiles and folders found on this volume:")
             for line in n_results:
-                print(IDENT + line)
+                print(INDENT + line)
         else:
             now = datetime.now()
             dt = now.strftime("%d%m%Y_%H%M%S")
