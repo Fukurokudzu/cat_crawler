@@ -171,3 +171,4 @@ cython_debug/
 Py_snippets.py
 local.db
 .vscode/settings.json
+search*.txt

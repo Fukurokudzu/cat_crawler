@@ -1,8 +1,8 @@
 import os
 import sys
 import pickle
-# to show time by perf_counter()
 from time import perf_counter
+from datetime import datetime
 import argparse
 import wmi
 
@@ -45,8 +45,9 @@ def get_volume_num_by_serial(serial):
     Finding volume index in database by some serial number
     """
     i = [count for count, volume in enumerate(database)
-                            if serial == volume.serial]
+         if serial == volume.serial]
     return i[0] if i else None
+
 
 def init_drives():
     """
@@ -63,7 +64,7 @@ def show_root_folders(volume):
     """
     root_folders = []
     file_realpath = os.path.dirname(__file__) + os.sep \
-                                + volume.serial + ".indx"
+        + volume.serial + ".indx"
     with open(file_realpath, "r", encoding="utf-8") as indx_file:
         for line in indx_file.readlines():
             line_type, path = parse_indx_line(line)
@@ -75,7 +76,7 @@ def show_root_folders(volume):
                         root_folder not in EXCEPTIONS:
                     root_folders.append(root_folder)
     if root_folders:
-        print("\nRoot folders of", volume.name, volume.serial+":")
+        print("\nRoot folders of", volume.name, volume.serial + ":")
         for folder in root_folders:
             print(IDENT, folder)
 
@@ -88,9 +89,9 @@ def show_drives(drives):
         print(f"\n[#{count}] Volume {drive.caption}")
         print(IDENT + "Name:", drive.name)
         print(IDENT + "Size: {0:.2f}".format(
-            int(drive.size)/1024**3), "Gb")
+            int(drive.size) / 1024**3), "Gb")
         print(IDENT + "Free size: {0:.2f}".format(
-            int(drive.free_size)/1024**3), "Gb")
+            int(drive.free_size) / 1024**3), "Gb")
         print(IDENT + "File system:", drive.file_system)
         print(IDENT + "Type:", drive.drive_type)
         print(IDENT + "Volume serial:", drive.serial)
@@ -105,9 +106,9 @@ def show_volume(volume):
     print(f"\nVolume {volume.caption}")
     print(IDENT + "Name:", volume.name)
     print(IDENT + "Size: {0:.2f}".format(
-        int(volume.size)/1024**3), "Gb")
+        int(volume.size) / 1024**3), "Gb")
     print(IDENT + "Free size: {0:.2f}".format(
-        int(volume.free_size)/1024**3), "Gb")
+        int(volume.free_size) / 1024**3), "Gb")
     print(IDENT + "File system:", volume.file_system)
     print(IDENT + "Type:", volume.drive_type)
     print(IDENT + "Volume serial:", volume.serial)
@@ -132,8 +133,8 @@ def scan_volume(path):
 
         for folder in dirs:
             if folder not in EXCEPTIONS:
-                list_of_folders.append("d*" + os.path.join(root, folder) + "\n")
-        
+                list_of_folders.append("d*"
+                                       + os.path.join(root, folder) + "\n")
 
     print(f"\nDisk {path} scanned")
     print(
@@ -169,44 +170,46 @@ def parse_args():
     """
 
     parser = argparse.ArgumentParser()
- 
+
     subparsers = parser.add_subparsers(help="Commands")
 
     parser1 = subparsers.add_parser("print", help="print indexed volumes")
     parser1.set_defaults(func=print_drives)
-    
+
     choice = range(0, len(database)) if len(database) > 1 else ['0']
 
     parser1.add_argument("indexed_volume_num",
-                        help="number of indexed volume",
-                        type=int,
-                        choices=choice,
-                        nargs='?'
-                        )
+                         help="number of indexed volume",
+                         type=int,
+                         choices=choice,
+                         nargs='?'
+                         )
 
     parser2 = subparsers.add_parser("local", help="print local system drives")
     parser2.set_defaults(func=show_local)
 
     parser3 = subparsers.add_parser("scan",
-        help="indexing files and folder for selected volume")
+                                    help="indexing files and folder for \
+                                    selected volume")
     parser3.set_defaults(func=scan)
 
     parser4 = subparsers.add_parser("search",
-        help="search string in file or folder names in database",)
+                                    help="search string in file or folder \
+                                    names in database",)
     parser4.add_argument("search_string", help="search request", nargs="+")
     parser4.set_defaults(func=search_string)
 
     parser5 = subparsers.add_parser("purge",
-        help="remove database and index files",)
+                                    help="remove database and index files",)
     parser5.set_defaults(func=purge)
 
     parser6 = subparsers.add_parser("remove",
-        help="removes volume from index database",)
+                                    help="removes volume from index database",)
     parser6.add_argument("volume_num",
-                        help="number of indexed volume",
-                        type=int,
-                        choices=range(0, len(database))
-                        )
+                         help="number of indexed volume",
+                         type=int,
+                         choices=range(0, len(database))
+                         )
     parser6.set_defaults(func=remove_indexed_volume)
 
     return parser.parse_args()
@@ -217,10 +220,12 @@ def parse_indx_line(line):
     line_type = line.split("*")[0]
     return line_type, path
 
+
 def parse_results_line(line):
     path = line.split("*")[1].strip()
     serial = line.split("*")[0]
     return serial, path
+
 
 def search_string(args):
     """
@@ -232,7 +237,7 @@ def search_string(args):
     results_count = {}
     for count, volume in enumerate(database):
         file_realpath = os.path.join(os.path.dirname(__file__),
-                        volume.serial + '.indx')
+                                     volume.serial + '.indx')
         with open(file_realpath, "r", encoding="utf-8") as search_list:
             files_found = []
             dirs_found = []
@@ -253,10 +258,21 @@ def search_string(args):
 
             if files_found or dirs_found:
                 results_count[volume.serial] = [len(files_found),
-                                                    len(dirs_found)]
+                                                len(dirs_found)]
                 print(f"\nVOLUME #{count}: {volume.name} {volume.serial}")
                 volumes_nums_found.append(count)
-          
+
+            if dirs_found:
+                results.append(dirs_found)
+                print("\n", IDENT, "Found \""+search_query+"\" in",
+                      len(dirs_found), "folders")
+
+                for j in dirs_found[:SHORT_SEARCH_RESULTS_LIMIT]:
+                    print(IDENT, parse_results_line(j)[1])
+                if len(dirs_found) > SHORT_SEARCH_RESULTS_LIMIT:
+                    print(IDENT, "... and",
+                          len(dirs_found)-SHORT_SEARCH_RESULTS_LIMIT, "more")
+
             if files_found:
                 results.append(files_found)
                 print("\n", IDENT, "Found \""+search_query+"\" in",
@@ -265,20 +281,9 @@ def search_string(args):
                     print(IDENT, parse_results_line(i)[1])
                 if len(files_found) > SHORT_SEARCH_RESULTS_LIMIT:
                     print(IDENT, "... and",
-                            len(files_found)-SHORT_SEARCH_RESULTS_LIMIT-1,"more")
+                          len(files_found)-SHORT_SEARCH_RESULTS_LIMIT-1,
+                          "more")
 
-
-            if dirs_found:
-                results.append(dirs_found)
-                print("\n", IDENT, "Found \""+search_query+"\" in",
-                      len(dirs_found), "folders")
-                
-                for j in dirs_found[:SHORT_SEARCH_RESULTS_LIMIT]:
-                    print(IDENT, parse_results_line(j)[1])
-                if len(dirs_found) > SHORT_SEARCH_RESULTS_LIMIT:
-                    print(IDENT, "... and",
-                            len(dirs_found)-SHORT_SEARCH_RESULTS_LIMIT, "more")
-    
     if volumes_nums_found:
         while True:
             try:
@@ -294,28 +299,45 @@ def search_string(args):
                     break
             except ValueError:
                 print(f"Volume index shoud be in {volumes_nums_found}")
-        
+
         show_volume(database[volume_num])
+        n_results = normalize_search_results(database[volume_num].serial,
+                                             results)
+
         files_found, dirs_found = results_count[database[volume_num].serial]
         if files_found < LONG_SEARCH_RESULTS_LIMIT \
                 and dirs_found < LONG_SEARCH_RESULTS_LIMIT:
-            print_search_results(database[volume_num].serial, results)
+            for line in n_results:
+                print(IDENT + line)
         else:
-            
-            print("There are too many results, dump in file path.txt")
+            now = datetime.now()
+            dt = now.strftime("%d%m%Y_%H%M%S")
+            file_realpath = os.path.dirname(__file__) + os.sep + \
+                "search_" + dt + ".txt"
+            try:
+                with open(file_realpath, "w", encoding="utf-8") \
+                        as out_file:
+                    for items in n_results:
+                        out_file.writelines(items + "\n")
+                print(f"There are too many results,"
+                      f"dump in {file_realpath} created")
+                os.system(file_realpath)
+            except:
+                print("Couln't create search file")
 
     if not volumes_nums_found:
         print("Nothing found in local database")
 
 
-def print_search_results(serial, results):
+def normalize_search_results(serial, results):
     print("\nFiles and folders found on this volume:")
+    n_list = []
     for line in results:
         for i in line:
             res_serial, path = parse_results_line(i)
             if res_serial == serial:
-                print(IDENT + path)
-
+                n_list.append(path)
+    return n_list
 
 # cat_crawler functions to work with local database
 def init_local_db():
@@ -410,7 +432,7 @@ def scan(args):
                 break
         except ValueError:
             print(f"Drive index shoud be a number"
-                    f"between 0 and {local_drives_amount - 1}")
+                  f"between 0 and {local_drives_amount - 1}")
 
     t1_start = perf_counter()
     volume_to_index = local_drives[local_drive_num]
@@ -462,6 +484,7 @@ def purge(args):
         except:
             print("Could'nt remove local.db file, quitting")
 
+
 def remove_indexed_volume(args):
 
     volume_to_remove = database[args.volume_num]
@@ -476,5 +499,8 @@ def remove_indexed_volume(args):
 if __name__ == "__main__":
 
     database = init_local_db()
-    args = parse_args()
-    args.func(args)
+    if len(sys.argv) > 1:
+        args = parse_args()
+        args.func(args)
+    else:
+        print("You can find available commands using -h")
