@@ -61,7 +61,8 @@ def init_drives():
 
 def show_root_folders(volume):
     """
-    Showing root folders for selected volume
+    Shows root folders for selected volume
+    Might help to remember, what's stored on this volume
     """
     root_folders = []
     file_realpath = os.path.dirname(__file__) + os.sep \
@@ -78,6 +79,9 @@ def show_root_folders(volume):
 
 
 def find_root_folders(line, root_folders):
+    """
+    Helper for show_root_folders()
+    """
     line_type, path = parse_indx_line(line)
     path_segments = path.split(os.sep)
     if line_type == "d" and len(path_segments) == 2:
@@ -88,7 +92,7 @@ def find_root_folders(line, root_folders):
 
 def show_drives(drives):
     """
-    prints all the drives details, including name, type and size (in Gbs)
+    prints drives details, including name, type and size (in Gbs)
     """
     for count, drive in enumerate(drives):
         print(f"\n[#{count}] Volume {drive.caption}")
@@ -129,7 +133,8 @@ def show_volume(volume):
 
 def scan_volume(path):
     """
-    Creates list of indxfiles for selected path
+    Creates list of files for selected path
+    Using "f" for files, "d" for dirs to differentisate them later
     """
     list_of_files = []
     list_of_folders = []
@@ -204,6 +209,7 @@ def parse_args():
                                     help="search string in file or folder \
                                     names in database",)
     parser4.add_argument("search_string", help="search request", nargs="+")
+
     parser4.set_defaults(func=search_string)
 
     parser5 = subparsers.add_parser("purge",
@@ -242,8 +248,10 @@ def parse_results_line(line):
 def search_string(args):
     """
     Crawling throughout .indx files in search of user search query
+    Search is now case insensitive
     """
     search_query = " ".join(args.search_string)
+    search_query_lower = search_query.lower()
     volumes_nums_found = []
     results = []
     results_count = {}
@@ -254,7 +262,8 @@ def search_string(args):
             files_found = []
             dirs_found = []
             for line in search_list.readlines():
-                if search_query in line:
+                line_lower = line.lower()
+                if search_query_lower in line_lower:
                     line_type, path = parse_indx_line(line)
                     tmp_path = path.split(os.sep)
                     time_to_stop = None
@@ -263,9 +272,11 @@ def search_string(args):
                             time_to_stop = 1
                     if time_to_stop:
                         break
-                    if line_type == "f":
+                    head, tail = os.path.split(path)
+                    if line_type == "f" and search_query_lower in tail.lower():
                         files_found.append(volume.serial + "*" + path)
-                    elif line_type == "d":
+                    elif line_type == "d" and search_query_lower in \
+                                      path.split(os.sep)[-1].lower():
                         dirs_found.append(volume.serial + "*" + path)
 
             if files_found or dirs_found:
@@ -318,7 +329,7 @@ def search_string(args):
         files_found, dirs_found = results_count[database[volume_num].serial]
         if files_found < LONG_SEARCH_RESULTS_LIMIT \
                 and dirs_found < LONG_SEARCH_RESULTS_LIMIT:
-            print("You were looking for \"", search_query, "\"")
+            print("You were looking for \"" + search_query +"\"")
             show_volume(database[volume_num])
             print("\nFiles and folders found on this volume:")
             for line in n_results:
@@ -384,7 +395,7 @@ def init_local_db():
 
 def add_to_db(volume):
     """
-    adding volume to local database
+    Adding volume to local database
     """
     database.append(volume)
     with open(LOCAL_DB, 'wb') as db:
@@ -394,6 +405,9 @@ def add_to_db(volume):
 
 
 def remove_from_db(volume):
+    """
+    Final stage of removing indexed volume
+    """
     del database[get_volume_num_by_serial(volume.serial)]
     with open(LOCAL_DB, 'wb') as db:
         pickle.dump(database, db)
@@ -409,11 +423,18 @@ def remove_from_db(volume):
 
 
 def update_db(database):
+    """
+    Rewriting local db
+    """
     with open(LOCAL_DB, 'wb') as db:
         pickle.dump(database, db)
 
 
 def print_drives(args):
+    """
+    Universal function to print selected volumes.
+    Usally gets database list as argument
+    """
     if (len(database)):
         if args.indexed_volume_num is not None:
             show_volume(database[args.indexed_volume_num])
@@ -424,8 +445,10 @@ def print_drives(args):
         print("Local database is empty. Scan volumes using \"scan\"")
 
 
-# printing connected system drives
 def show_local(args):
+    """
+    Printing connected local drives
+    """
     local_drives = init_drives()
     print("\nConnected local_drives:")
     show_drives(local_drives)
@@ -433,7 +456,7 @@ def show_local(args):
 
 def scan(args):
     """
-    scans local drives and creates index file for selected volume
+    Scans local drives and creates index file for selected volume
     """
     local_drives = init_drives()
     show_drives(local_drives)
@@ -496,10 +519,13 @@ def scan(args):
 
 
 def purge(args):
+    """
+    Remove created database and index files
+    """
     question = "Are you sure you want to remove "\
-            "database and index files?\nThis "\
-            "action will only affect this software database, "\
-            "your files and volumes won't be affected\n(y/n) "
+               "database and index files?\nThis "\
+               "action will only affect this software database, "\
+               "your files and volumes won't be affected\n(y/n) "
     answer = input(question)
     if answer.lower() in ['y', 'yes', 'sure']:
         tmp_database = database.copy()
@@ -512,6 +538,9 @@ def purge(args):
 
 
 def remove_indexed_volume(args):
+    """
+    Prints volumes you can delete
+    """
     if args.volume_num is not None:
         volume_to_remove = database[args.volume_num]
         ask_to_remove(volume_to_remove)
@@ -526,9 +555,12 @@ def remove_indexed_volume(args):
 
 
 def ask_to_remove(volume):
+    """
+    Asking user if he sure to remove selected volume
+    """
     question = "Are you sure you want to remove volume " + \
-            volume.name+" " + \
-            volume.serial+"? (y/n) "
+        volume.name+" " + \
+        volume.serial+"? (y/n) "
     answer = input(question)
     if answer.lower() in ['y', 'yes', 'sure']:
         remove_from_db(volume)
