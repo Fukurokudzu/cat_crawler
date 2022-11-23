@@ -172,3 +172,4 @@ Py_snippets.py
 local.db
 .vscode/settings.json
 search*.txt
+*.zip

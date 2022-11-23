@@ -68,17 +68,22 @@ def show_root_folders(volume):
         + volume.serial + ".indx"
     with open(file_realpath, "r", encoding="utf-8") as indx_file:
         for line in indx_file.readlines():
-            line_type, path = parse_indx_line(line)
-            path_segments = path.split(os.sep)
-            if line_type == "d" and len(path_segments) == 2:
-                root_folder = path
-                if root_folder not in root_folders and \
-                        root_folder not in EXCEPTIONS:
-                    root_folders.append(root_folder)
+            if find_root_folders(line, root_folders) is not None:
+                root_folders.append(find_root_folders(line, root_folders))
+
     if root_folders:
         print("\nRoot folders of", volume.name, volume.serial + ":")
         for folder in root_folders:
             print(INDENT, folder)
+
+
+def find_root_folders(line, root_folders):
+    line_type, path = parse_indx_line(line)
+    path_segments = path.split(os.sep)
+    if line_type == "d" and len(path_segments) == 2:
+        if path not in root_folders and \
+                path not in EXCEPTIONS:
+            return path
 
 
 def show_drives(drives):
