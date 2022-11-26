@@ -329,7 +329,7 @@ def search_string(args):
         files_found, dirs_found = results_count[database[volume_num].serial]
         if files_found < LONG_SEARCH_RESULTS_LIMIT \
                 and dirs_found < LONG_SEARCH_RESULTS_LIMIT:
-            print("You were looking for \"" + search_query +"\"")
+            print("You were looking for \"" + search_query + "\"")
             show_volume(database[volume_num])
             print("\nFiles and folders found on this volume:")
             for line in n_results:
@@ -357,8 +357,21 @@ def search_string(args):
                 sys.stdout.close()
                 sys.stdout = old_stdout
                 os.system(file_realpath)
+                print("Waiting for you to close system editor window...")
             except:
                 print("Couln't create search results file")
+            answer = input("Want to save search"
+                           "results for later use? (y/n): ")
+            if answer.lower() in ['yes', 'y', 'sure', 'why not']:
+                sys.exit()
+            else:
+                try:
+                    os.remove(file_realpath)
+                except FileNotFoundError:
+                    print("Can't remove file",
+                          file_realpath, ", quitting")
+                    sys.exit()
+                print("Search results file removed")
 
     if not volumes_nums_found:
         print("Nothing found in local database")
@@ -416,7 +429,7 @@ def remove_from_db(volume):
         try:
             os.remove(index_file_path)
         except FileNotFoundError:
-            print("Can't remove to file",
+            print("Can't remove file",
                   volume.serial, ".inx quitting")
             sys.exit()
         print("Volume", volume.serial, "removed")
@@ -534,7 +547,7 @@ def purge(args):
         try:
             os.remove(LOCAL_DB)
         except:
-            print("Could'nt remove local.db file, quitting")
+            print("Couldn't remove local.db file, quitting")
 
 
 def remove_indexed_volume(args):
